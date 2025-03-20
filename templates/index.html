@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NBA Research Assistant</title>
+</head>
+<body>
+    <h1>Ask me about the Lakers!</h1>
+    <form method="POST">
+        <input type="text" name="query" placeholder="e.g., research the last Lakers game">
+        <input type="submit" value="Submit">
+    </form>
+    {% if response %}
+        <p>{{ response }}</p>
+    {% endif %}
+</body>
+</html>
