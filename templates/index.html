@@ -14,14 +14,14 @@
             flex-direction: column;
         }
         .chat-container {
-            flex: 2;
+            flex: 1; /* 50% height */
             overflow-y: auto;
             padding: 20px;
             background-color: #fff;
             border-bottom: 1px solid #dee2e6;
         }
         .betting-container {
-            flex: 1;
+            flex: 1; /* 50% height */
             overflow-y: auto;
             padding: 20px;
             background-color: #e9ecef;
@@ -62,10 +62,12 @@
     <div class="betting-container" id="bettingWindow">
         <div class="betting-proposal">Welcome! Chat to see betting options.</div>
     </div>
-    <form method="POST" class="input-group" id="chatForm">
-        <input type="text" name="query" class="form-control" placeholder="Type your question (e.g., 'last Lakers game')" aria-label="NBA Query">
-        <button type="submit" class="btn btn-primary">Send</button>
-    </form>
+    <div class="input-group">
+        <form method="POST" class="w-100 d-flex" id="chatForm">
+            <input type="text" name="query" class="form-control" placeholder="Type your question (e.g., 'last Lakers game')" aria-label="NBA Query">
+            <button type="submit" class="btn btn-primary ms-2">Send</button>
+        </form>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
