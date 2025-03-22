@@ -1,10 +1,9 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import requests
 import os
 from dotenv import load_dotenv
 from datetime import datetime
 
-# Load environment variables
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 API_URL = "https://api.x.ai/v1/chat/completions"
@@ -12,7 +11,6 @@ API_URL = "https://api.x.ai/v1/chat/completions"
 app = Flask(__name__)
 
 def query_grok(prompt):
-    # Get current date
     current_date = datetime.now().strftime('%Y-%m-%d')
     payload = {
         "model": "grok-2-1212",
@@ -43,11 +41,13 @@ def index():
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
-        return render_template('index.html', response=response)
-    return render_template('index.html', response=None)
+        # Mock betting proposal (replace with real API later)
+        betting_proposal = "Bet: Lakers to win next game @ 2.5 odds - Click to place!"
+        return jsonify({'response': response, 'betting': betting_proposal})
+    return render_template('index.html')
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-    
-    # # all the debug conversation with XAI saved in this link https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
+
+# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
