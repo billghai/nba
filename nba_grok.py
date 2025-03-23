@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))  # Explicit path
 API_KEY = os.getenv("XAI_API_KEY")
 ODDS_API_KEY = os.getenv("ODDS_API_KEY")
 API_URL = "https://api.x.ai/v1/chat/completions"
@@ -44,11 +44,12 @@ def get_betting_odds(query):
         "markets": "h2h,spreads,totals",
         "oddsFormat": "decimal"
     }
+    print("Sending ODDS_API_KEY:", ODDS_API_KEY)  # Debug
+    print("Request URL:", ODDS_API_URL + "?" + "&".join(f"{k}={v}" for k, v in params.items()))  # Debug
     try:
         response = requests.get(ODDS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
-        # Simple logic: grab odds for the first upcoming game (refine later)
         if data and len(data) > 0:
             game = data[0]
             home_team = game["home_team"]
