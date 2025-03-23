@@ -4,9 +4,12 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))  # Explicit path
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+print("Looking for .env at:", env_path)  # Debug path
+load_dotenv(env_path)
 API_KEY = os.getenv("XAI_API_KEY")
 ODDS_API_KEY = os.getenv("ODDS_API_KEY")
+print("Loaded ODDS_API_KEY:", ODDS_API_KEY)  # Debug value
 API_URL = "https://api.x.ai/v1/chat/completions"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
