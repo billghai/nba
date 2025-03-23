@@ -6,7 +6,9 @@ from datetime import datetime
 
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
+ODDS_API_KEY = os.getenv("ODDS_API_KEY")
 API_URL = "https://api.x.ai/v1/chat/completions"
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
 app = Flask(__name__)
 
@@ -31,18 +33,39 @@ def query_grok(prompt):
     try:
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
+        return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
+
+def get_betting_odds(query):
+    params = {
+        "apiKey": ODDS_API_KEY,
+        "regions": "us",
+        "markets": "h2h,spreads,totals",
+        "oddsFormat": "decimal"
+    }
+    try:
+        response = requests.get(ODDS_API_URL, params=params)
+        response.raise_for_status()
+        data = response.json()
+        # Simple logic: grab odds for the first upcoming game (refine later)
+        if data and len(data) > 0:
+            game = data[0]
+            home_team = game["home_team"]
+            away_team = game["away_team"]
+            bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+            bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} @ {bookmakers[0]['price']}"
+            return bet
+        return "No upcoming NBA odds available right now."
+    except Exception as e:
+        return f"Betting odds error: {str(e)}"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
-        # Mock betting proposal (replace with real API later)
-        betting_proposal = "Bet: Lakers to win next game @ 2.5 odds - Click to place!"
+        betting_proposal = get_betting_odds(query)
         return jsonify({'response': response, 'betting': betting_proposal})
     return render_template('index.html')
 
