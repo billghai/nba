@@ -51,6 +51,7 @@ def get_betting_odds(query=None):
         response = requests.get(ODDS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
+        print("Odds API response length:", len(data))  # Debug
         if data and len(data) > 0:
             if query:
                 query_lower = query.lower()
@@ -58,16 +59,22 @@ def get_betting_odds(query=None):
                     home_team = game["home_team"].lower()
                     away_team = game["away_team"].lower()
                     if any(team in query_lower for team in [home_team, away_team]):
-                        bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                        return f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                        if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                            bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                            return f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                        else:
+                            return f"No odds available for {game['home_team']} vs {game['away_team']} yet."
             bets = []
             for game in data[:3]:
-                home_team = game["home_team"]
-                away_team = game["away_team"]
-                bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
-                bets.append(bet)
-            return "\n".join(bets) if bets else "No upcoming NBA odds available."
+                if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                    home_team = game["home_team"]
+                    away_team = game["away_team"]
+                    bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                    bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                    bets.append(bet)
+                else:
+                    print(f"No odds for {game['home_team']} vs {game['away_team']}")  # Debug
+            return "\n".join(bets) if bets else "No upcoming NBA odds available with current bookmakers."
         return "No upcoming NBA odds available right now."
     except Exception as e:
         return f"Betting odds error: {str(e)}"
