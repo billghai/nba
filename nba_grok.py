@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
-print("Looking for .env at:", env_path)  # Debug path
+print("Looking for .env at:", env_path)
 load_dotenv(env_path)
 API_KEY = os.getenv("XAI_API_KEY")
 ODDS_API_KEY = os.getenv("ODDS_API_KEY")
-print("Loaded ODDS_API_KEY:", ODDS_API_KEY)  # Debug value
+print("Loaded ODDS_API_KEY:", ODDS_API_KEY)
 API_URL = "https://api.x.ai/v1/chat/completions"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
@@ -44,7 +44,7 @@ def get_betting_odds(query=None):
     params = {
         "apiKey": ODDS_API_KEY,
         "regions": "us",
-        "markets": "h2h,spreads,totals",
+        "markets": "h2h",
         "oddsFormat": "decimal"
     }
     try:
@@ -52,7 +52,6 @@ def get_betting_odds(query=None):
         response.raise_for_status()
         data = response.json()
         if data and len(data) > 0:
-            # If query provided, filter for matching team
             if query:
                 query_lower = query.lower()
                 for game in data:
@@ -60,14 +59,13 @@ def get_betting_odds(query=None):
                     away_team = game["away_team"].lower()
                     if any(team in query_lower for team in [home_team, away_team]):
                         bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                        return f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} @ {bookmakers[0]['price']}"
-            # Default: Show top 3 upcoming games
+                        return f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
             bets = []
-            for game in data[:3]:  # Limit to 3 popular bets
+            for game in data[:3]:
                 home_team = game["home_team"]
                 away_team = game["away_team"]
                 bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} @ {bookmakers[0]['price']}"
+                bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                 bets.append(bet)
             return "\n".join(bets) if bets else "No upcoming NBA odds available."
         return "No upcoming NBA odds available right now."
@@ -81,13 +79,14 @@ def index():
         response = query_grok(query)
         betting_proposal = get_betting_odds(query)
         return jsonify({'response': response, 'betting': betting_proposal})
-    # Default: Show popular bets on page load
     popular_bets = get_betting_odds()
     return render_template('index.html', popular_bets=popular_bets)
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
 
 # Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
 # https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
