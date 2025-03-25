@@ -56,13 +56,12 @@ def get_betting_odds(query=None):
             bets = []
             if query:
                 query_lower = query.lower()
-                print("Querying for:", query_lower)
-                team_found = False
+                team_name = query_lower.replace("last ", "").replace("next ", "").replace(" game", "").strip()  # Extract team
+                print("Looking for team:", team_name)
                 for game in data:
                     home_team = game["home_team"].lower()
                     away_team = game["away_team"].lower()
-                    if any(team in query_lower for team in [home_team, away_team]):
-                        team_found = True
+                    if team_name in home_team or team_name in away_team:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
@@ -70,9 +69,16 @@ def get_betting_odds(query=None):
                             print("Found match:", bet)
                 if bets:
                     return "\n".join(bets)
-                if team_found:
-                    return f"No odds available yet for the next {query_lower.split('last ')[-1]} game."
-                return f"No upcoming games found matching '{query}' in the current odds data."
+                # Fallback with popular bets if no match
+                fallback_bets = []
+                for game in data[:3]:
+                    if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                        home_team = game["home_team"]
+                        away_team = game["away_team"]
+                        bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                        bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                        fallback_bets.append(bet)
+                return f"No odds available yet for the next {team_name.capitalize()} game. Here are some popular bets:\n" + "\n".join(fallback_bets) if fallback_bets else f"No odds available yet for the next {team_name.capitalize()} game."
             # Default: Top 3 upcoming games
             for game in data[:3]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
@@ -102,4 +108,4 @@ if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
-# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
+# Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
