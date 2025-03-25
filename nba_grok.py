@@ -38,7 +38,7 @@ TEAM_NAME_MAP = {
     "nets": "Brooklyn Nets",
     "hawks": "Atlanta Hawks",
     "sixers": "Philadelphia 76ers", "76ers": "Philadelphia 76ers",
-    "spurs": "サンアントニオ・スパーズ",
+    "spurs": "San Antonio Spurs",
     "thunder": "Oklahoma City Thunder",
     "timberwolves": "Minnesota Timberwolves",
     "blazers": "Portland Trail Blazers", "trail blazers": "Portland Trail Blazers",
@@ -56,8 +56,10 @@ def query_grok(prompt):
             {"role": "system", "content": (
                 f"Today's date is {current_date}. You are a sports research assistant. For any NBA game query, "
                 "fetch the most recent game data available as of this date, using web or X search if needed. "
-                "Ensure each team has only one 'last game' per date—no doubleheaders unless playoffs. Provide "
-                "the game date, matchup, final score, top scorer, and highest assists in a conversational tone."
+                "Ensure each team has only one 'last game' per date—no doubleheaders in the regular season. "
+                "Cross-check opponents and dates to avoid duplicates (e.g., Denver Nuggets can't play Lakers "
+                "and Clippers on March 23, 2025). If data conflicts, prioritize official NBA sources or flag uncertainty. "
+                "Provide the game date, matchup, final score, top scorer, and highest assists in a conversational tone."
             )},
             {"role": "user", "content": prompt}
         ],
@@ -92,7 +94,6 @@ def get_betting_odds(query=None):
             bets = []
             remaining_bets = []
 
-            # Reset betting output explicitly
             betting_output = ""
 
             if query:
