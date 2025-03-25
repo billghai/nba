@@ -52,11 +52,11 @@ def get_betting_odds(query=None):
         response.raise_for_status()
         data = response.json()
         print("Odds API response length:", len(data))
+        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']}" for g in data])
         if data and len(data) > 0:
             bets = []
             if query:
                 query_lower = query.lower()
-                # Enhanced team name extraction
                 for word in ["last", "next", "game", "research", "the"]:
                     query_lower = query_lower.replace(word, "").strip()
                 team_name = query_lower
@@ -64,8 +64,10 @@ def get_betting_odds(query=None):
                 for game in data:
                     home_team = game["home_team"].lower()
                     away_team = game["away_team"].lower()
-                    # Broader matching for partial names
-                    if team_name in home_team or team_name in away_team or home_team in team_name or away_team in team_name:
+                    # Looser matching
+                    if (team_name in home_team or team_name in away_team or
+                        home_team in team_name or away_team in team_name or
+                        any(team_name in t.lower() for t in [game["home_team"], game["away_team"]])):
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
@@ -73,26 +75,20 @@ def get_betting_odds(query=None):
                             print("Found match:", bet)
                 if bets:
                     return "\n".join(bets)
-                # Fallback with popular bets
+                # Fallback
                 fallback_bets = []
                 for game in data[:3]:
                     if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                        home_team = game["home_team"]
-                        away_team = game["away_team"]
                         bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                        bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                        bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                         fallback_bets.append(bet)
                 return f"No odds available yet for the next {team_name.capitalize()} game. Here are some popular bets:\n" + "\n".join(fallback_bets) if fallback_bets else f"No odds available yet for the next {team_name.capitalize()} game."
-            # Default: Top 3 upcoming games
+            # Default
             for game in data[:3]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                    home_team = game["home_team"]
-                    away_team = game["away_team"]
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                    bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                    bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                     bets.append(bet)
-                else:
-                    print(f"No odds for {game['home_team']} vs {game['away_team']}")
             return "\n".join(bets) if bets else "No upcoming NBA odds available with current bookmakers."
         return "No upcoming NBA odds available right now."
     except Exception as e:
@@ -111,7 +107,6 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
-# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
+ 
 
 # Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
