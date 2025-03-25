@@ -56,7 +56,7 @@ def get_betting_odds(query=None):
             bets = []
             if query:
                 query_lower = query.lower()
-                # Better team name extraction
+                # Enhanced team name extraction
                 for word in ["last", "next", "game", "research", "the"]:
                     query_lower = query_lower.replace(word, "").strip()
                 team_name = query_lower
@@ -64,7 +64,8 @@ def get_betting_odds(query=None):
                 for game in data:
                     home_team = game["home_team"].lower()
                     away_team = game["away_team"].lower()
-                    if team_name in home_team or team_name in away_team:
+                    # Broader matching for partial names
+                    if team_name in home_team or team_name in away_team or home_team in team_name or away_team in team_name:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
