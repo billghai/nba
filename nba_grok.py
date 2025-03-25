@@ -51,34 +51,38 @@ def get_betting_odds(query=None):
         response = requests.get(ODDS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
-        print("Odds API response length:", len(data))  # Debug
+        print("Odds API response length:", len(data))
         if data and len(data) > 0:
             bets = []
             if query:
                 query_lower = query.lower()
-                print("Querying for:", query_lower)  # Debug
+                print("Querying for:", query_lower)
+                team_found = False
                 for game in data:
                     home_team = game["home_team"].lower()
                     away_team = game["away_team"].lower()
                     if any(team in query_lower for team in [home_team, away_team]):
+                        team_found = True
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                            bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                             bets.append(bet)
-                            print("Found match:", bet)  # Debug
+                            print("Found match:", bet)
                 if bets:
-                    return "\n".join(bets)  # Return all matching bets
-            # Default or no query match: Show top 3 upcoming games
-            if not bets:
-                for game in data[:3]:
-                    if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                        home_team = game["home_team"]
-                        away_team = game["away_team"]
-                        bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                        bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
-                        bets.append(bet)
-                    else:
-                        print(f"No odds for {game['home_team']} vs {game['away_team']}")  # Debug
+                    return "\n".join(bets)
+                if team_found:
+                    return f"No odds available yet for the next {query_lower.split('last ')[-1]} game."
+                return f"No upcoming games found matching '{query}' in the current odds data."
+            # Default: Top 3 upcoming games
+            for game in data[:3]:
+                if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                    home_team = game["home_team"]
+                    away_team = game["away_team"]
+                    bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                    bet = f"Bet on {home_team} vs {away_team}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                    bets.append(bet)
+                else:
+                    print(f"No odds for {game['home_team']} vs {game['away_team']}")
             return "\n".join(bets) if bets else "No upcoming NBA odds available with current bookmakers."
         return "No upcoming NBA odds available right now."
     except Exception as e:
@@ -98,4 +102,4 @@ if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
-# Chat log: https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
