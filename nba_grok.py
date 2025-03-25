@@ -29,7 +29,7 @@ TEAM_NAME_MAP = {
     "magic": "Orlando Magic",
     "grizzlies": "Memphis Grizzlies",
     "knicks": "New York Knicks",
-    "heat": "Miami Heat",
+    "heat": "Miami Heat", "heats": "Miami Heat",
     "clippers": "Los Angeles Clippers",
     "cavaliers": "Cleveland Cavaliers",
     "mavericks": "Dallas Mavericks",
@@ -55,10 +55,9 @@ def query_grok(prompt):
         "messages": [
             {"role": "system", "content": (
                 f"Today's date is {current_date}. You are a sports research assistant. For any NBA game query, "
-                "fetch the most recent data available as of this date, using web or X search if needed. Provide "
-                "the game date, matchup, final score, top scorer, and highest assists in a conversational tone. "
-                "If the query is about the 'last' game, ensure it’s the most recent game played by that team in "
-                "the 2024-25 season."
+                "fetch the most recent game data available as of this date, using web or X search if needed. "
+                "Ensure each team has only one 'last game' per date—no doubleheaders unless playoffs. Provide "
+                "the game date, matchup, final score, top scorer, and highest assists in a conversational tone."
             )},
             {"role": "user", "content": prompt}
         ],
@@ -95,9 +94,15 @@ def get_betting_odds(query=None):
 
             if query:
                 query_lower = query.lower()
-                for word in ["last", "next", "game", "research", "the"]:
+                for word in ["last", "next", "game", "research", "the", "what", "was", "score", "in", "hte", "ths"]:
                     query_lower = query_lower.replace(word, "").strip()
-                team_name = query_lower
+                # Extract team name more aggressively
+                for team in TEAM_NAME_MAP:
+                    if team in query_lower:
+                        team_name = team
+                        break
+                else:
+                    team_name = query_lower
                 full_team_name = TEAM_NAME_MAP.get(team_name, team_name)
                 print("Looking for team:", team_name, "Mapped to:", full_team_name)
 
