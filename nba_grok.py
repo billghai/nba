@@ -38,7 +38,7 @@ TEAM_NAME_MAP = {
     "nets": "Brooklyn Nets",
     "hawks": "Atlanta Hawks",
     "sixers": "Philadelphia 76ers", "76ers": "Philadelphia 76ers",
-    "spurs": "San Antonio Spurs",
+    "spurs": "サンアントニオ・スパーズ",
     "thunder": "Oklahoma City Thunder",
     "timberwolves": "Minnesota Timberwolves",
     "blazers": "Portland Trail Blazers", "trail blazers": "Portland Trail Blazers",
@@ -92,11 +92,13 @@ def get_betting_odds(query=None):
             bets = []
             remaining_bets = []
 
+            # Reset betting output explicitly
+            betting_output = ""
+
             if query:
                 query_lower = query.lower()
                 for word in ["last", "next", "game", "research", "the", "what", "was", "score", "in", "hte", "ths"]:
                     query_lower = query_lower.replace(word, "").strip()
-                # Extract team name more aggressively
                 for team in TEAM_NAME_MAP:
                     if team in query_lower:
                         team_name = team
@@ -123,29 +125,34 @@ def get_betting_odds(query=None):
 
                 if bets:
                     bets.extend(remaining_bets[:4 - len(bets)])
-                    return "\n".join(bets)
+                    betting_output = "You asked: {}\n{}".format(query, "\n".join(bets))
                 
-                for game in data:
-                    home_team = game["home_team"].lower().strip()
-                    away_team = game["away_team"].lower().strip()
-                    if full_team_name.lower() in [home_team, away_team]:
-                        if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                            bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
-                            bets.append(bet)
-                            print("Found match in full data:", bet, "Time:", game["commence_time"])
-                            break
-                if not bets:
-                    bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
-                bets.extend(remaining_bets[:3])
-                return "\n".join(bets)
+                else:
+                    for game in data:
+                        home_team = game["home_team"].lower().strip()
+                        away_team = game["away_team"].lower().strip()
+                        if full_team_name.lower() in [home_team, away_team]:
+                            if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                                bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                                bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                                bets.append(bet)
+                                print("Found match in full data:", bet, "Time:", game["commence_time"])
+                                break
+                    if not bets:
+                        bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
+                    bets.extend(remaining_bets[:3])
+                    betting_output = "You asked: {}\n{}".format(query, "\n".join(bets))
+            
+            else:
+                for game in top_games[:4]:
+                    if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                        bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                        bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
+                        bets.append(bet)
+                betting_output = "Popular NBA Bets\n" + "\n".join(bets) if bets else "No upcoming NBA odds available with current bookmakers."
+            
+            return betting_output
 
-            for game in top_games[:4]:
-                if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                    bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                    bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
-                    bets.append(bet)
-            return "\n".join(bets) if bets else "No upcoming NBA odds available with current bookmakers."
         return "No upcoming NBA odds available right now."
     except Exception as e:
         return f"Betting odds error: {str(e)}"
