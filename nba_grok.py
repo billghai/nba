@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, jsonify
 import requests
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 print("Looking for .env at:", env_path)
@@ -14,6 +14,40 @@ API_URL = "https://api.x.ai/v1/chat/completions"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
 app = Flask(__name__)
+
+# Team name mapping: short name -> full API name
+TEAM_NAME_MAP = {
+    "lakers": "Los Angeles Lakers",
+    "jazz": "Utah Jazz",
+    "celtics": "Boston Celtics",
+    "warriors": "Golden State Warriors",
+    "nuggets": "Denver Nuggets",
+    "bulls": "Chicago Bulls",
+    "kings": "Sacramento Kings",
+    "bucks": "Milwaukee Bucks",
+    "suns": "Phoenix Suns",
+    "raptors": "Toronto Raptors",
+    "magic": "Orlando Magic",
+    "grizzlies": "Memphis Grizzlies",
+    "knicks": "New York Knicks",
+    "heat": "Miami Heat",
+    "clippers": "Los Angeles Clippers",
+    "cavaliers": "Cleveland Cavaliers",
+    "mavericks": "Dallas Mavericks",
+    "rockets": "Houston Rockets",
+    "pacers": "Indiana Pacers",
+    "nets": "Brooklyn Nets",
+    "hawks": "Atlanta Hawks",
+    "sixers": "Philadelphia 76ers", "76ers": "Philadelphia 76ers",
+    "spurs": "San Antonio Spurs",
+    "thunder": "Oklahoma City Thunder",
+    "timberwolves": "Minnesota Timberwolves",
+    "blazers": "Portland Trail Blazers", "trail blazers": "Portland Trail Blazers",
+    "pistons": "Detroit Pistons",
+    "hornets": "Charlotte Hornets",
+    "wizards": "Washington Wizards",
+    "pelicans": "New Orleans Pelicans"
+}
 
 def query_grok(prompt):
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -41,11 +75,13 @@ def query_grok(prompt):
         return f"Oops! Something went wrong with the API: {str(e)}"
 
 def get_betting_odds(query=None):
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%dT00:00:00Z')
     params = {
         "apiKey": ODDS_API_KEY,
         "regions": "us",
         "markets": "h2h",
-        "oddsFormat": "decimal"
+        "oddsFormat": "decimal",
+        "date": tomorrow
     }
     try:
         response = requests.get(ODDS_API_URL, params=params)
@@ -60,14 +96,12 @@ def get_betting_odds(query=None):
                 for word in ["last", "next", "game", "research", "the"]:
                     query_lower = query_lower.replace(word, "").strip()
                 team_name = query_lower
-                print("Looking for team:", team_name)
+                full_team_name = TEAM_NAME_MAP.get(team_name, team_name)  # Map short to full, fallback to input
+                print("Looking for team:", team_name, "Mapped to:", full_team_name)
                 for game in data:
-                    home_team = game["home_team"].lower()
-                    away_team = game["away_team"].lower()
-                    # Looser matching
-                    if (team_name in home_team or team_name in away_team or
-                        home_team in team_name or away_team in team_name or
-                        any(team_name in t.lower() for t in [game["home_team"], game["away_team"]])):
+                    home_team = game["home_team"].lower().strip()
+                    away_team = game["away_team"].lower().strip()
+                    if full_team_name.lower() in [home_team, away_team]:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
@@ -82,7 +116,7 @@ def get_betting_odds(query=None):
                         bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                         bet = f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                         fallback_bets.append(bet)
-                return f"No odds available yet for the next {team_name.capitalize()} game. Here are some popular bets:\n" + "\n".join(fallback_bets) if fallback_bets else f"No odds available yet for the next {team_name.capitalize()} game."
+                return f"No odds available yet for the next {full_team_name} game. Here are some popular bets:\n" + "\n".join(fallback_bets) if fallback_bets else f"No odds available yet for the next {full_team_name} game."
             # Default
             for game in data[:3]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
