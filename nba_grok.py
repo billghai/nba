@@ -15,7 +15,6 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
 app = Flask(__name__)
 
-# Team name mapping: short name -> full API name
 TEAM_NAME_MAP = {
     "lakers": "Los Angeles Lakers",
     "jazz": "Utah Jazz",
@@ -75,20 +74,21 @@ def query_grok(prompt):
         return f"Oops! Something went wrong with the API: {str(e)}"
 
 def get_betting_odds(query=None):
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%dT00:00:00Z')
+    # Fetch odds for next 3 days to catch all near-future games
+    end_date = (datetime.now() + timedelta(days=3)).strftime('%Y-%m-%dT23:59:59Z')
     params = {
         "apiKey": ODDS_API_KEY,
         "regions": "us",
         "markets": "h2h",
         "oddsFormat": "decimal",
-        "date": tomorrow
+        "date": end_date  # Up to 3 days ahead
     }
     try:
         response = requests.get(ODDS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
         print("Odds API response length:", len(data))
-        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']}" for g in data])
+        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         if data and len(data) > 0:
             bets = []
             if query:
@@ -96,7 +96,7 @@ def get_betting_odds(query=None):
                 for word in ["last", "next", "game", "research", "the"]:
                     query_lower = query_lower.replace(word, "").strip()
                 team_name = query_lower
-                full_team_name = TEAM_NAME_MAP.get(team_name, team_name)  # Map short to full, fallback to input
+                full_team_name = TEAM_NAME_MAP.get(team_name, team_name)
                 print("Looking for team:", team_name, "Mapped to:", full_team_name)
                 for game in data:
                     home_team = game["home_team"].lower().strip()
@@ -106,7 +106,7 @@ def get_betting_odds(query=None):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
                             bets.append(bet)
-                            print("Found match:", bet)
+                            print("Found match:", bet, "Time:", game["commence_time"])
                 if bets:
                     return "\n".join(bets)
                 # Fallback
