@@ -56,7 +56,10 @@ def get_betting_odds(query=None):
             bets = []
             if query:
                 query_lower = query.lower()
-                team_name = query_lower.replace("last ", "").replace("next ", "").replace(" game", "").strip()  # Extract team
+                # Better team name extraction
+                for word in ["last", "next", "game", "research", "the"]:
+                    query_lower = query_lower.replace(word, "").strip()
+                team_name = query_lower
                 print("Looking for team:", team_name)
                 for game in data:
                     home_team = game["home_team"].lower()
@@ -69,7 +72,7 @@ def get_betting_odds(query=None):
                             print("Found match:", bet)
                 if bets:
                     return "\n".join(bets)
-                # Fallback with popular bets if no match
+                # Fallback with popular bets
                 fallback_bets = []
                 for game in data[:3]:
                     if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
@@ -107,5 +110,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+# Chat log: https://grok.com/share/bGVnYWN5_e33c04e7-8eff-46b5-8cfd-226633279d2f
 
 # Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
