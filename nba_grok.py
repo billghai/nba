@@ -167,7 +167,7 @@ def get_betting_odds(query=None):
                             print("Found match:", bets[-1], "Time:", game["commence_time"])
                     else:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                            bookmakers = game["bookmakers"][0]["market]
+                            bookmakers = game["bookmakers"][0]["market"]
 
  
 
