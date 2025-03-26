@@ -1,8 +1,18 @@
 from flask import Flask, request, render_template, jsonify
 import requests
 import os
+from dotenv import load_dotenv  # Add this line
 import json
 from datetime import datetime
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+print("Looking for .env at:", env_path)
+load_dotenv(env_path)
+API_KEY = os.getenv("XAI_API_KEY")
+ODDS_API_KEY = os.getenv("ODDS_API_KEY")
+print("Loaded ODDS_API_KEY:", ODDS_API_KEY)
+API_URL = "https://api.x.ai/v1/chat/completions"
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 print("Looking for .env at:", env_path)
@@ -206,6 +216,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
  
 
 # Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
