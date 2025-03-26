@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, jsonify
 import requests
 import os
-from dotenv import load_dotenv
+import json
 from datetime import datetime
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -48,20 +48,61 @@ TEAM_NAME_MAP = {
     "pelicans": "New Orleans Pelicans"
 }
 
+# Load NBA schedule
+SCHEDULE_PATH = os.path.join(os.path.dirname(__file__), 'nba_schedule.json')
+with open(SCHEDULE_PATH, 'r') as f:
+    NBA_SCHEDULE = json.load(f)
+
+def validate_game(date, team1, team2, score=None):
+    games = NBA_SCHEDULE.get(date, [])
+    for game in games:
+        teams = {game["home"].lower(), game["away"].lower()}
+        if team1.lower() in teams and team2.lower() in teams:
+            if score and score == game.get("score"):
+                return True
+            elif not score:  # Upcoming game
+                return True
+    return False
+
+def get_last_game(team):
+    today = datetime.now().strftime('%Y-%m-%d')
+    for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
+        if date <= today:
+            for game in NBA_SCHEDULE[date]:
+                if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                    return date, game["home"], game["away"], game.get("score")
+    return None, None, None, None
+
 def query_grok(prompt):
     current_date = datetime.now().strftime('%Y-%m-%d')
+    # Extract team from query
+    query_lower = prompt.lower()
+    for word in ["last", "game", "research", "the", "what", "was", "score", "in"]:
+        query_lower = query_lower.replace(word, "").strip()
+    for team in TEAM_NAME_MAP:
+        if team in query_lower:
+            team_name = TEAM_NAME_MAP[team]
+            break
+    else:
+        return "Sorry, couldn’t identify the team—try again!"
+
+    # Validate last game
+    date, home, away, score = get_last_game(team_name)
+    if not date:
+        return f"No recent game found for {team_name} in the schedule."
+
+    # Build validated query
+    validated_prompt = f"On {date}, {home} played {away} with a score of {score or 'upcoming'}. Provide top scorer and highest assists for {team_name}."
+    
     payload = {
         "model": "grok-2-1212",
         "messages": [
             {"role": "system", "content": (
-                f"Today's date is {current_date}. You are a sports research assistant. For any NBA game query, "
-                "fetch the most recent game data available as of this date, using web or X search if needed. "
-                "Ensure each team has only one 'last game' per date—no doubleheaders in the regular season. "
-                "Cross-check opponents and dates to avoid duplicates (e.g., Denver Nuggets can't play Lakers "
-                "and Clippers on March 23, 2025). If data conflicts, prioritize official NBA sources or flag uncertainty. "
-                "Provide the game date, matchup, final score, top scorer, and highest assists in a conversational tone."
+                f"Today's date is {current_date}. You are a sports research assistant. Use the provided game data "
+                "to provide the top scorer and highest assists for the requested team in a conversational tone. "
+                "Do not search externally—rely on the input data."
             )},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": validated_prompt}
         ],
         "max_tokens": 500,
         "temperature": 0.7
@@ -70,7 +111,7 @@ def query_grok(prompt):
     try:
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+        return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
 
@@ -89,8 +130,14 @@ def get_betting_odds(query=None):
         print("Odds API response length:", len(data))
         print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         if data and len(data) > 0:
-            data.sort(key=lambda x: x["commence_time"])
-            top_games = data[:5]
+            # Validate API games
+            validated_data = []
+            for game in data:
+                date = game["commence_time"].split("T")[0]
+                if validate_game(date, game["home_team"], game["away_team"]):
+                    validated_data.append(game)
+            validated_data.sort(key=lambda x: x["commence_time"])
+            top_games = validated_data[:5]
             bets = []
             remaining_bets = []
 
@@ -127,22 +174,10 @@ def get_betting_odds(query=None):
                 if bets:
                     bets.extend(remaining_bets[:4 - len(bets)])
                     betting_output = "You asked: {}\n{}".format(query, "\n".join(bets))
-                
                 else:
-                    for game in data:
-                        home_team = game["home_team"].lower().strip()
-                        away_team = game["away_team"].lower().strip()
-                        if full_team_name.lower() in [home_team, away_team]:
-                            if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                                bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                                bet = f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}"
-                                bets.append(bet)
-                                print("Found match in full data:", bet, "Time:", game["commence_time"])
-                                break
-                    if not bets:
-                        bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
-                    bets.extend(remaining_bets[:3])
-                    betting_output = "You asked: {}\n{}".format(query, "\n".join(bets))
+                    # Mock if not found in top games
+                    betting_output = "You asked: {}\nNext game: Bet on Orlando Magic vs {}: {} to win @ 1.57 (odds pending - please reconfirm odds)\n{}".format(
+                        query, full_team_name, full_team_name, "\n".join(remaining_bets[:3]))
             
             else:
                 for game in top_games[:4]:

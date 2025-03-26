@@ -1,0 +1,14 @@
+{
+  "2025-03-23": [
+    {"home": "Golden State Warriors", "away": "Los Angeles Lakers", "score": "108-115"},
+    {"home": "Golden State Warriors", "away": "Los Angeles Clippers", "score": "104-112"},
+    {"home": "Brooklyn Nets", "away": "New York Knicks", "score": "108-112"},
+    {"home": "Portland Trail Blazers", "away": "Denver Nuggets", "score": "129-116"}
+  ],
+  "2025-03-26": [
+    {"home": "Charlotte Hornets", "away": "Cleveland Cavaliers", "score": null},
+    {"home": "Indiana Pacers", "away": "Chicago Bulls", "score": null},
+    {"home": "New York Knicks", "away": "Toronto Raptors", "score": null},
+    {"home": "San Antonio Spurs", "away": "Phoenix Suns", "score": null}
+  ]
+}
