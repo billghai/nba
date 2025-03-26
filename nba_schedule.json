@@ -5,6 +5,10 @@
     {"home": "Brooklyn Nets", "away": "New York Knicks", "score": "108-112"},
     {"home": "Portland Trail Blazers", "away": "Denver Nuggets", "score": "129-116"}
   ],
+  "2025-03-25": [
+    {"home": "Orlando Magic", "away": "Los Angeles Lakers", "score": "115-108"},
+    {"home": "Dallas Mavericks", "away": "Los Angeles Clippers", "score": null}
+  ],
   "2025-03-26": [
     {"home": "Charlotte Hornets", "away": "Cleveland Cavaliers", "score": null},
     {"home": "Indiana Pacers", "away": "Chicago Bulls", "score": null},
