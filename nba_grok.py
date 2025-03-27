@@ -122,19 +122,30 @@ def query_grok(prompt):
         return f"Oops! Something went wrong with the API: {str(e)}"
 
 def get_betting_odds(query=None):
-    params = {
-        "apiKey": ODDS_API_KEY,
-        "regions": "us",
-        "markets": "h2h",
-        "oddsFormat": "decimal",
-        "daysFrom": 7
-    }
+    # BetOnline Scraper
+    try:
+        url = "https://www.betonline.ag/sportsbook/basketball/nba"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, headers=headers, timeout=5)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        betonline_games = soup.find_all('tr', class_='event')
+        betonline_odds = {}
+        for game in betonline_games:
+            teams = game.find('td', class_='team').text.strip().split(' vs ')
+            odds = game.find_all('td', class_='odds')[0].text.strip()
+            odds_val = float(odds.replace('+', ''))
+            decimal_odds = (odds_val / 100) + 1 if odds_val > 0 else 1 + (100 / abs(odds_val))
+            betonline_odds[f"{teams[0]} vs {teams[1]}"] = (teams[0], decimal_odds)
+    except Exception as e:
+        print(f"BetOnline scrape failed: {str(e)}")
+        betonline_odds = {}
+
+    # Existing Odds API
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
-        print("Odds API response length:", len(data))
-        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
         if len(validated_data) < 3:
             validated_data = data[:5] if len(data) >= 5 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(5 - len(data))]
@@ -156,26 +167,31 @@ def get_betting_odds(query=None):
             else:
                 team_name = query_lower
             full_team_name = TEAM_NAME_MAP.get(team_name, team_name)
-            print("Looking for team:", team_name, "Mapped to:", full_team_name)
 
             date, home, away = get_next_game(full_team_name)
             if date:
+                game_key = f"{home} vs {away}"
+                if game_key in betonline_odds:
+                    team, odds = betonline_odds[game_key]
+                    bets.append(f"Next game: Bet on {home} vs {away}: {team} to win @ {odds:.2f}")
+                else:
+                    for game in top_games:
+                        home_team = game["home_team"].lower().strip()
+                        away_team = game["away_team"].lower().strip()
+                        if full_team_name.lower() in [home_team, away_team]:
+                            if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                                bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                                bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
+                                break
+                    if not bets:
+                        bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending)")
                 for game in top_games:
-                    home_team = game["home_team"].lower().strip()
-                    away_team = game["away_team"].lower().strip()
-                    if full_team_name.lower() in [home_team, away_team]:
-                        if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                            bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-                            print("Found match:", bets[-1], "Time:", game.get("commence_time", "N/A"))
-                    elif len(remaining_bets) < 3:
+                    if len(remaining_bets) < 3 and game["home_team"] != home and game["away_team"] != away:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             remaining_bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-                if not bets:
-                    bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
             else:
-                bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
+                bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending)")
             betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:max(0, 3 - len(bets))])
         
         else:
@@ -183,7 +199,7 @@ def get_betting_odds(query=None):
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-            betting_output = "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon! Check back for the latest NBA action."
+            betting_output = "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!"
         
         return betting_output
 
