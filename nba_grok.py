@@ -127,9 +127,8 @@ def get_betting_odds(query=None):
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
-        if len(validated_data) < 3:
-            validated_data = data[:5] if len(data) >= 5 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(5 - len(data))]
+        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data[:5]])
+        validated_data = data[:5] if len(data) >= 5 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(5 - len(data))]
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:5]
         bets = []
