@@ -65,18 +65,18 @@ def validate_game(date, team1, team2, score=None):
     return False
 
 def get_last_game(team):
-    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
         if date < today:
             for game in NBA_SCHEDULE[date]:
-                if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                if team.lower() in [game["home"].lower(), game["away"].lower()] and game.get("score"):
                     return date, game["home"], game["away"], game.get("score")
     return None, None, None, None
 
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys()):
-        if date > today:  # Skip today
+        if date > today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"]
