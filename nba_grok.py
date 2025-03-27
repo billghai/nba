@@ -3,7 +3,7 @@ import requests
 import os
 from dotenv import load_dotenv
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 print("Looking for .env at:", env_path)
@@ -65,16 +65,16 @@ def validate_game(date, team1, team2, score=None):
     return False
 
 def get_last_game(team):
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
     for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
-        if date < today:  # Strictly past games
+        if date < today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"], game.get("score")
     return None, None, None, None
 
 def get_next_game(team):
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
     for date in sorted(NBA_SCHEDULE.keys()):
         if date >= today:
             for game in NBA_SCHEDULE[date]:
@@ -83,7 +83,7 @@ def get_next_game(team):
     return None, None, None
 
 def query_grok(prompt):
-    current_date = datetime.now().strftime('%Y-%m-%d')
+    current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-03-31'})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
     for word in ["last", "game", "research", "the", "what", "was", "score", "in"]:
@@ -201,7 +201,7 @@ def index():
     return render_template('index.html', popular_bets=popular_bets)
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 10000))  # Render default
+    port = int(os.getenv("PORT", 10000))
     print(f"Starting Flask on 0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
 
