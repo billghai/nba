@@ -136,7 +136,7 @@ def get_betting_odds(query=None):
         print("Odds API response length:", len(data))
         print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
-        if len(validated_data) < 3:  # Loosen further
+        if len(validated_data) < 3:
             validated_data = data[:5] if len(data) >= 5 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(5 - len(data))]
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:5]
@@ -183,25 +183,11 @@ def get_betting_odds(query=None):
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-            betting_output = "Popular NBA Bets\n" + "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon! Check back for the latest NBA action."
+            betting_output = "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon! Check back for the latest NBA action."
         
         return betting_output
 
     except Exception as e:
         return f"Betting odds error: {str(e)}"
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        query = request.form['query']
-        response = query_grok(query)
-        betting_proposal = get_betting_odds(query)
-        return jsonify({'response': response, 'betting': betting_proposal})
-    popular_bets = get_betting_odds()
-    return render_template('index.html', popular_bets=popular_bets)
-
-if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
 
 # Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
