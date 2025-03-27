@@ -67,7 +67,7 @@ def validate_game(date, team1, team2, score=None):
 def get_last_game(team):
     today = datetime.now().strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
-        if date < today:  # Only past games
+        if date < today or (date == today and NBA_SCHEDULE[date][0].get("score")):  # Past or scored today
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"], game.get("score")
@@ -84,7 +84,7 @@ def get_next_game(team):
 
 def query_grok(prompt):
     current_date = datetime.now().strftime('%Y-%m-%d')
-    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-04-01'})
+    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-03-31'})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
     for word in ["last", "game", "research", "the", "what", "was", "score", "in"]:
         query_lower = query_lower.replace(word, "").strip()
@@ -127,7 +127,7 @@ def get_betting_odds(query=None):
         "regions": "us",
         "markets": "h2h",
         "oddsFormat": "decimal",
-        "daysFrom": 7  # Bump to 7 days
+        "daysFrom": 7
     }
     try:
         response = requests.get(ODDS_API_URL, params=params)
@@ -176,7 +176,6 @@ def get_betting_odds(query=None):
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
-            # Ensure 3 popular bets
             betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:max(0, 3 - len(bets))])
         
         else:
