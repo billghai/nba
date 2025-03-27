@@ -67,7 +67,7 @@ def validate_game(date, team1, team2, score=None):
 def get_last_game(team):
     today = datetime.now().strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
-        if date < today or (date == today and NBA_SCHEDULE[date][0].get("score")):  # Past or scored today
+        if date < today:  # Strictly past games
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"], game.get("score")
@@ -136,8 +136,8 @@ def get_betting_odds(query=None):
         print("Odds API response length:", len(data))
         print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
-        if not validated_data:
-            validated_data = data[:5]  # Take top 5 raw if no matches
+        if len(validated_data) < 3:  # Loosen if too few
+            validated_data = data[:5]
         validated_data.sort(key=lambda x: x["commence_time"])
         top_games = validated_data[:5]
         bets = []
@@ -168,7 +168,7 @@ def get_betting_odds(query=None):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
                             print("Found match:", bets[-1], "Time:", game["commence_time"])
-                    else:
+                    elif len(remaining_bets) < 3:  # Cap at 3
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             remaining_bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
