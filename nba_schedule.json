@@ -3,7 +3,7 @@
     {"home": "Orlando Magic", "away": "Los Angeles Lakers", "score": "115-108"},
     {"home": "Cleveland Cavaliers", "away": "Miami Heat", "score": "111-101"},
     {"home": "Utah Jazz", "away": "Boston Celtics", "score": "99-121"},
-    {"home": "Dallas Mavericks", "away": "Los Angeles Clippers", "score": "112-104"}
+    {"home": "Golden State Warriors", "away": "Dallas Mavericks", "score": "112-108"}
   ],
   "2025-03-26": [
     {"home": "Charlotte Hornets", "away": "Cleveland Cavaliers", "score": null},
@@ -14,8 +14,7 @@
   "2025-03-27": [
     {"home": "Indiana Pacers", "away": "Los Angeles Lakers", "score": null},
     {"home": "Golden State Warriors", "away": "Miami Heat", "score": null},
-    {"home": "New York Knicks", "away": "Brooklyn Nets", "score": null},
-    {"home": "Detroit Pistons", "away": "San Antonio Spurs", "score": null}
+    {"home": "New York Knicks", "away": "Brooklyn Nets", "score": null}
   ],
   "2025-03-28": [
     {"home": "Philadelphia 76ers", "away": "Washington Wizards", "score": null},
@@ -24,20 +23,13 @@
   ],
   "2025-03-29": [
     {"home": "New York Knicks", "away": "Los Angeles Clippers", "score": null},
-    {"home": "Boston Celtics", "away": "Charlotte Hornets", "score": null},
-    {"home": "Golden State Warriors", "away": "Denver Nuggets", "score": null}
+    {"home": "Boston Celtics", "away": "Charlotte Hornets", "score": null}
   ],
   "2025-03-30": [
     {"home": "Miami Heat", "away": "Philadelphia 76ers", "score": null},
-    {"home": "Los Angeles Lakers", "away": "Phoenix Suns", "score": null},
-    {"home": "Utah Jazz", "away": "Sacramento Kings", "score": null}
+    {"home": "Los Angeles Lakers", "away": "Phoenix Suns", "score": null}
   ],
   "2025-03-31": [
-    {"home": "Indiana Pacers", "away": "Milwaukee Bucks", "score": null},
-    {"home": "New York Knicks", "away": "Detroit Pistons", "score": null}
-  ],
-  "2025-04-01": [
-    {"home": "Golden State Warriors", "away": "Portland Trail Blazers", "score": null},
-    {"home": "Utah Jazz", "away": "Minnesota Timberwolves", "score": null}
+    {"home": "Indiana Pacers", "away": "Milwaukee Bucks", "score": null}
   ]
 }

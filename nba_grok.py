@@ -127,7 +127,7 @@ def get_betting_odds(query=None):
         "regions": "us",
         "markets": "h2h",
         "oddsFormat": "decimal",
-        "daysFrom": 3
+        "daysFrom": 7  # Bump to 7 days
     }
     try:
         response = requests.get(ODDS_API_URL, params=params)
@@ -137,7 +137,7 @@ def get_betting_odds(query=None):
         print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
         if not validated_data:
-            validated_data = data  # Fallback to raw data
+            validated_data = data[:5]  # Take top 5 raw if no matches
         validated_data.sort(key=lambda x: x["commence_time"])
         top_games = validated_data[:5]
         bets = []
@@ -176,14 +176,15 @@ def get_betting_odds(query=None):
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending - please reconfirm odds)")
-            betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:3])
+            # Ensure 3 popular bets
+            betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:max(0, 3 - len(bets))])
         
         else:
             for game in top_games[:4]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-            betting_output = "Popular NBA Bets\n" + "\n".join(bets) if bets else "Hang tight—odds are coming soon! Check back for the latest NBA action."
+            betting_output = "Popular NBA Bets\n" + "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon! Check back for the latest NBA action."
         
         return betting_output
 
