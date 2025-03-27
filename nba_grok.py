@@ -122,8 +122,7 @@ def query_grok(prompt):
         return f"Oops! Something went wrong with the API: {str(e)}"
 
         return f"Betting odds error: {str(e)}"
-  
-def get_betting_odds(query=None):
+  def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -154,14 +153,18 @@ def get_betting_odds(query=None):
             date, home, away = get_next_game(full_team_name)
             if date:
                 game_key = f"{home} vs {away}"
-                print(f"Looking for: {game_key}")
+                alt_game_key = f"{away} vs {home}"
+                print(f"Looking for: {game_key} or {alt_game_key}")
                 for game in top_games:
                     api_game_key = f"{game['home_team']} vs {game['away_team']}"
                     print(f"Checking API: {api_game_key}")
-                    if game_key.lower() == api_game_key.lower():
+                    if game_key.lower() == api_game_key.lower() or alt_game_key.lower() == api_game_key.lower():
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
+                            # Pick winner based on full_team_name
+                            winner = bookmakers[0]['name'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['name']
+                            price = bookmakers[0]['price'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['price']
+                            bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {winner} to win @ {price}")
                             break
                 if not bets:
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending)")
@@ -184,7 +187,7 @@ def get_betting_odds(query=None):
         return betting_output
 
     except Exception as e:
-        return f"Betting odds error: {str(e)}"   
+        return f"Betting odds error: {str(e)}"       
     
 @app.route('/', methods=['GET', 'POST'])
 def index():
