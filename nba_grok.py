@@ -120,7 +120,7 @@ def query_grok(prompt):
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
 
- from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify
 import requests
 import os
 from dotenv import load_dotenv
