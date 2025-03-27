@@ -14,5 +14,10 @@
     {"home": "Indiana Pacers", "away": "Chicago Bulls", "score": null},
     {"home": "New York Knicks", "away": "Toronto Raptors", "score": null},
     {"home": "San Antonio Spurs", "away": "Phoenix Suns", "score": null}
+  ],
+  "2025-03-27": [
+    {"home": "Indiana Pacers", "away": "Los Angeles Lakers", "score": null},
+    {"home": "Golden State Warriors", "away": "Miami Heat", "score": null},
+    {"home": "New York Knicks", "away": "Brooklyn Nets", "score": null}
   ]
 }

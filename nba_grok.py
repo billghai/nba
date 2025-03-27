@@ -257,6 +257,8 @@ def get_betting_odds(query=None):
         print("Odds API response length:", len(data))
         print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
         validated_data = [game for game in data if validate_game(game["commence_time"].split("T")[0], game["home_team"], game["away_team"])]
+        if not validated_data:  # Fallback if no matches
+            validated_data = data  # Use raw data if schedule’s too limited
         validated_data.sort(key=lambda x: x["commence_time"])
         top_games = validated_data[:5]
         bets = []
@@ -265,7 +267,7 @@ def get_betting_odds(query=None):
         betting_output = ""
 
         if query:
-            query_lower = query.lower().replace("'", "").replace("’", "")  # Strip apostrophes
+            query_lower = query.lower().replace("'", "").replace("’", "")
             for word in ["last", "next", "game", "research", "the", "what", "was", "score", "in", "hte", "ths"]:
                 query_lower = query_lower.replace(word, "").strip()
             for team in TEAM_NAME_MAP:
