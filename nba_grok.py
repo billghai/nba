@@ -76,7 +76,7 @@ def get_last_game(team):
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys()):
-        if date >= today:  # Include today
+        if date >= today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"]
@@ -121,8 +121,7 @@ def query_grok(prompt):
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
 
-        return f"Betting odds error: {str(e)}"
-  def get_betting_odds(query=None):
+def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -161,7 +160,6 @@ def query_grok(prompt):
                     if game_key.lower() == api_game_key.lower() or alt_game_key.lower() == api_game_key.lower():
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            # Pick winner based on full_team_name
                             winner = bookmakers[0]['name'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['name']
                             price = bookmakers[0]['price'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['price']
                             bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {winner} to win @ {price}")
@@ -187,8 +185,8 @@ def query_grok(prompt):
         return betting_output
 
     except Exception as e:
-        return f"Betting odds error: {str(e)}"       
-    
+        return f"Betting odds error: {str(e)}"
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -204,4 +202,4 @@ if __name__ == '__main__':
     print(f"Starting Flask on 0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
 
-# Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# chat URL https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
