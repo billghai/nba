@@ -74,9 +74,9 @@ def get_last_game(team):
     return None, None, None, None
 
 def get_next_game(team):
-    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     for date in sorted(NBA_SCHEDULE.keys()):
-        if date >= today:
+        if date > today:  # Skip today
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"]
