@@ -4,7 +4,8 @@
     {"home": "Cleveland Cavaliers", "away": "Miami Heat", "score": "111-101"},
     {"home": "Utah Jazz", "away": "Boston Celtics", "score": "99-121"},
     {"home": "Golden State Warriors", "away": "Dallas Mavericks", "score": "112-108"},
-    {"home": "New York Knicks", "away": "Detroit Pistons", "score": "124-99"}
+    {"home": "New York Knicks", "away": "Detroit Pistons", "score": "124-99"},
+    {"home": "Los Angeles Clippers", "away": "Philadelphia 76ers", "score": "108-107"}
   ],
   "2025-03-26": [
     {"home": "Charlotte Hornets", "away": "Cleveland Cavaliers", "score": null},
@@ -32,9 +33,5 @@
   ],
   "2025-03-31": [
     {"home": "Indiana Pacers", "away": "Milwaukee Bucks", "score": null}
-  ],
-"2025-03-25": [
-    {"home": "Los Angeles Clippers", "away": "Philadelphia 76ers", "score": "108-107"},
-    {"home": "New York Knicks", "away": "Detroit Pistons", "score": "124-99"},
-    ]
+  ]
 }
