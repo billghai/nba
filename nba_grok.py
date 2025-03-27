@@ -121,6 +121,8 @@ def query_grok(prompt):
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
 
+        return f"Betting odds error: {str(e)}"
+  
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -151,10 +153,12 @@ def get_betting_odds(query=None):
 
             date, home, away = get_next_game(full_team_name)
             if date:
+                game_key = f"{home} vs {away}"
+                print(f"Looking for: {game_key}")
                 for game in top_games:
-                    home_team = game["home_team"].lower().strip()
-                    away_team = game["away_team"].lower().strip()
-                    if full_team_name.lower() in [home_team, away_team]:
+                    api_game_key = f"{game['home_team']} vs {game['away_team']}"
+                    print(f"Checking API: {api_game_key}")
+                    if game_key.lower() == api_game_key.lower():
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
@@ -180,8 +184,8 @@ def get_betting_odds(query=None):
         return betting_output
 
     except Exception as e:
-        return f"Betting odds error: {str(e)}"
-         
+        return f"Betting odds error: {str(e)}"   
+    
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
