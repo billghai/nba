@@ -190,4 +190,19 @@ def get_betting_odds(query=None):
     except Exception as e:
         return f"Betting odds error: {str(e)}"
 
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        query = request.form['query']
+        response = query_grok(query)
+        betting_proposal = get_betting_odds(query)
+        return jsonify({'response': response, 'betting': betting_proposal})
+    popular_bets = get_betting_odds()
+    return render_template('index.html', popular_bets=popular_bets)
+
+if __name__ == '__main__':
+    port = int(os.getenv("PORT", 10000))  # Render default
+    print(f"Starting Flask on 0.0.0.0:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False)
+
 # Chat log:https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
