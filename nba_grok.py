@@ -126,10 +126,10 @@ def get_betting_odds(query=None):
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
+        print("Raw API games (first 10):", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data[:10]])  # Trimmed
         validated_data = data[:10] if len(data) >= 10 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(10 - len(data))]
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
-        top_games = validated_data[:10]  # Expand to 10
+        top_games = validated_data[:10]
         bets = []
         remaining_bets = []
 
@@ -161,6 +161,7 @@ def get_betting_odds(query=None):
                             winner = bookmakers[0]['name'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['name']
                             price = bookmakers[0]['price'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['price']
                             bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {winner} to win @ {price}")
+                            print(f"Match found: {api_game_key} with odds {price}")
                             break
                 if not bets:
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending)")
