@@ -120,14 +120,18 @@ def query_grok(prompt):
         return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
+
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        print("Raw API games (first 10):", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data[:10]])  # Trimmed
-        validated_data = data[:10] if len(data) >= 10 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(10 - len(data))]
+        today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
+        print("Raw API games (first 10):", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data[:10]])
+        today_games = [g for g in data if g["commence_time"].startswith(today)]
+        other_games = [g for g in data if not g["commence_time"].startswith(today)]
+        validated_data = (today_games + other_games)[:10] if len(data) >= 10 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(10 - len(data))]
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:10]
         bets = []
@@ -173,6 +177,7 @@ def get_betting_odds(query=None):
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending)")
             betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:max(0, 3 - len(bets))])
+            betting_output += "\n*Odds subject to change at betting time—check your provider!*"
         
         else:
             for game in top_games[:4]:
@@ -180,12 +185,12 @@ def get_betting_odds(query=None):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
             betting_output = "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!"
+            betting_output += "\n*Odds subject to change at betting time—check your provider!*"
         
         return betting_output
 
     except Exception as e:
         return f"Betting odds error: {str(e)}"
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
