@@ -120,17 +120,16 @@ def query_grok(prompt):
         return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
         return f"Oops! Something went wrong with the API: {str(e)}"
-
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data[:5]])
-        validated_data = data[:5] if len(data) >= 5 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(5 - len(data))]
+        print("Raw API games:", [f"{g['home_team']} vs {g['away_team']} ({g['commence_time']})" for g in data])
+        validated_data = data[:10] if len(data) >= 10 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(10 - len(data))]
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
-        top_games = validated_data[:5]
+        top_games = validated_data[:10]  # Expand to 10
         bets = []
         remaining_bets = []
 
@@ -185,6 +184,7 @@ def get_betting_odds(query=None):
 
     except Exception as e:
         return f"Betting odds error: {str(e)}"
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
