@@ -133,27 +133,10 @@
             chatWindow.insertBefore(grokMsg, document.getElementById('chatForm'));
             scrollChat();
 
-            const bets = data.betting.split('<br>');
-            bets.forEach(bet => {
-                if (bet.trim()) {
-                    if (bet.includes('<small')) {
-                        const disclaimerDiv = document.createElement('div');
-                        disclaimerDiv.innerHTML = bet;
-                        bettingWindow.insertBefore(disclaimerDiv, popularBets);
-                    } else {
-                        const betDiv = document.createElement('div');
-                        betDiv.className = 'betting-proposal';
-                        betDiv.innerHTML = bet;
-                        bettingWindow.insertBefore(betDiv, popularBets);
-
-                        const betButton = document.createElement('button');
-                        betButton.className = 'btn btn-success bet-button';
-                        betButton.textContent = 'Place Bet';
-                        betButton.onclick = () => placeBet(bet);
-                        bettingWindow.insertBefore(betButton, popularBets);
-                    }
-                }
-            });
+            const betDiv = document.createElement('div');
+            betDiv.className = 'betting-proposal';
+            betDiv.innerHTML = data.betting;
+            bettingWindow.insertBefore(betDiv, popularBets);
             scrollBetting();
 
             document.querySelector('input[name="query"]').value = '';
