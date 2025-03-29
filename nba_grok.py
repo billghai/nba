@@ -143,7 +143,6 @@ def get_betting_odds(query=None):
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:10]
         bets = []
-        remaining_bets = []
 
         betting_output = ""
 
@@ -174,23 +173,21 @@ def get_betting_odds(query=None):
                             break
                 if not bets:
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending)")
-                for game in top_games:
-                    if len(remaining_bets) < 3 and game["home_team"] != home and game["away_team"] != away:
+                for game in top_games[:3]:  # Limit to 3 total bets
+                    if game["home_team"] != home and game["away_team"] != away and len(bets) < 3:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                            remaining_bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
+                            bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending)")
-            betting_output = "||".join(bets + remaining_bets[:max(0, 3 - len(bets))])
-            betting_output += "||<strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
+            betting_output = "<br>".join(bets) + "<br><strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
         
         else:
             for game in top_games[:4]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-            betting_output = "||".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!||"
-            betting_output += "||<strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
+            betting_output = "<br>".join(bets) + "<br><strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
         
         return betting_output
 
@@ -210,6 +207,5 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
 
 # chat URL https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
