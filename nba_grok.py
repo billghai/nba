@@ -131,7 +131,7 @@ def query_grok(prompt):
         return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
         return f"Oops! Something went wonky with the API: {str(e)}"
-
+# [Imports, TEAM_NAME_MAP, get_last_game, get_next_game, query_grok unchanged—skip to get_betting_odds]
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -212,5 +212,7 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
 
 # chat URL https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
