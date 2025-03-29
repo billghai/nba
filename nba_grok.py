@@ -177,7 +177,7 @@ def get_betting_odds(query=None):
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending)")
             betting_output = f"You asked: {query}\n" + "\n".join(bets + remaining_bets[:max(0, 3 - len(bets))])
-            betting_output += "\n*Odds subject to change at betting time—check your provider!*"
+            betting_output += "\n*Odds subject to change at betting time—check with your provider!*"
         
         else:
             for game in top_games[:4]:
@@ -185,7 +185,7 @@ def get_betting_odds(query=None):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
             betting_output = "\n".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!"
-            betting_output += "\n*Odds subject to change at betting time—check your provider!*"
+            betting_output += "\n*Odds subject to change at betting time—check with your provider!*"
         
         return betting_output
 
