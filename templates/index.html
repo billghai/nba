@@ -68,7 +68,7 @@
         <h3>Popular NBA Bets</h3>
         {% if popular_bets %}
             <div class="betting-proposal">{{ popular_bets | safe }}</div>
-            <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ popular_bets | replace('\n', ' ') | replace('<br>', ' ') }}')">Place Bet</button>
+            <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ popular_bets | replace('<br>', ' ') | replace('<[^>]+>', '') }}')">Place Bet</button>
         {% else %}
             <div class="betting-proposal">No upcoming NBA odds available right now.</div>
         {% endif %}
@@ -122,13 +122,13 @@
 
             const betMsg = document.createElement('div');
             betMsg.className = 'betting-proposal';
-            betMsg.innerHTML = data.betting;  // Changed from textContent to innerHTML
+            betMsg.innerHTML = data.betting;
             bettingWindow.appendChild(betMsg);
 
             const betButton = document.createElement('button');
             betButton.className = 'btn btn-success mt-2 mb-2';
             betButton.textContent = 'Place Bet';
-            betButton.onclick = () => placeBet(data.betting.replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''));  // Strip HTML for bet string
+            betButton.onclick = () => placeBet(data.betting.replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''));
             bettingWindow.appendChild(betButton);
             scrollBetting();
 
