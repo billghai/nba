@@ -72,13 +72,10 @@
         <h3>Popular NBA Bets</h3>
         <div id="popularBets">
         {% if popular_bets %}
-            {% set bets = popular_bets.split('<br>') %}
-            {% for bet in bets if bet.strip() and '<small' not in bet %}
+            {% set bets = popular_bets.split('<br><br>') %}
+            {% for bet in bets if bet.strip() %}
                 <div class="betting-proposal">{{ bet | safe }}</div>
-                <button class="btn btn-success bet-button" onclick="placeBet('{{ bet }}')">Place Bet</button>
-            {% endfor %}
-            {% for bet in bets if '<small' in bet %}
-                <div>{{ bet | safe }}</div>
+                <button class="btn btn-success bet-button" onclick="placeBet('{{ bet.split('<br>')[0] }}')">Place Bet</button>
             {% endfor %}
         {% else %}
             <div class="betting-proposal">No upcoming NBA odds available right now.</div>
@@ -133,10 +130,21 @@
             chatWindow.insertBefore(grokMsg, document.getElementById('chatForm'));
             scrollChat();
 
-            const betDiv = document.createElement('div');
-            betDiv.className = 'betting-proposal';
-            betDiv.innerHTML = data.betting;
-            bettingWindow.insertBefore(betDiv, popularBets);
+            const bets = data.betting.split('<br><br>');
+            bets.forEach(bet => {
+                if (bet.trim()) {
+                    const betDiv = document.createElement('div');
+                    betDiv.className = 'betting-proposal';
+                    betDiv.innerHTML = bet;
+                    bettingWindow.insertBefore(betDiv, popularBets);
+
+                    const betButton = document.createElement('button');
+                    betButton.className = 'btn btn-success bet-button';
+                    betButton.textContent = 'Place Bet';
+                    betButton.onclick = () => placeBet(bet.split('<br>')[0]);
+                    bettingWindow.insertBefore(betButton, popularBets);
+                }
+            });
             scrollBetting();
 
             document.querySelector('input[name="query"]').value = '';
