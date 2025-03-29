@@ -143,6 +143,7 @@ def get_betting_odds(query=None):
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:10]
         bets = []
+        used_games = set()
         disclaimer = "<br><strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
 
         betting_output = ""
@@ -171,23 +172,31 @@ def get_betting_odds(query=None):
                             winner = bookmakers[0]['name'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['name']
                             price = bookmakers[0]['price'] if full_team_name.lower() in bookmakers[0]['name'].lower() else bookmakers[1]['price']
                             bets.append(f"Next game: Bet on {game['home_team']} vs {game['away_team']}: {winner} to win @ {price}{disclaimer}")
+                            used_games.add(api_game_key.lower())
                             break
                 if not bets:
                     bets.append(f"Next game: Bet on {home} vs {away}: {full_team_name} to win @ 1.57 (odds pending){disclaimer}")
-                for game in top_games[:3]:
-                    if game["home_team"] != home and game["away_team"] != away and len(bets) < 3:
+                    used_games.add(game_key.lower())
+                for game in top_games:
+                    api_game_key = f"{game['home_team']} vs {game['away_team']}"
+                    if len(bets) < 3 and api_game_key.lower() not in used_games:
                         if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                             bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                             bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}{disclaimer}")
+                            used_games.add(api_game_key.lower())
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending){disclaimer}")
-            betting_output = "<br><br>".join(bets)  # Double <br> for spacing between divs
+                used_games.add(f"Orlando Magic vs {full_team_name}".lower())
+            betting_output = "<br><br>".join(bets)
         
         else:
             for game in top_games[:4]:
-                if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
-                    bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
-                    bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}{disclaimer}")
+                api_game_key = f"{game['home_team']} vs {game['away_team']}"
+                if api_game_key.lower() not in used_games:
+                    if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
+                        bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
+                        bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}{disclaimer}")
+                        used_games.add(api_game_key.lower())
             betting_output = "<br><br>".join(bets) if len(bets) >= 3 else f"Hang tight—odds are coming soon!{disclaimer}"
         
         return betting_output
