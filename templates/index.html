@@ -67,8 +67,14 @@
     <div class="betting-container" id="bettingWindow">
         <h3>Popular NBA Bets</h3>
         {% if popular_bets %}
-            <div class="betting-proposal">{{ popular_bets | safe }}</div>
-            <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ popular_bets | replace('<br>', ' ') | replace('<[^>]+>', '') }}')">Place Bet</button>
+            {% set bets = popular_bets.split('||') %}
+            {% for bet in bets if bet.strip() and '<small' not in bet %}
+                <div class="betting-proposal">{{ bet | safe }}</div>
+                <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ bet }}')">Place Bet</button>
+            {% endfor %}
+            {% for bet in bets if '<small' in bet %}
+                <div>{{ bet | safe }}</div>
+            {% endfor %}
         {% else %}
             <div class="betting-proposal">No upcoming NBA odds available right now.</div>
         {% endif %}
@@ -120,16 +126,27 @@
             chatWindow.insertBefore(grokMsg, document.getElementById('chatForm'));
             scrollChat();
 
-            const betMsg = document.createElement('div');
-            betMsg.className = 'betting-proposal';
-            betMsg.innerHTML = data.betting;
-            bettingWindow.appendChild(betMsg);
+            const bets = data.betting.split('||');
+            bets.forEach(bet => {
+                if (bet.trim()) {
+                    if (bet.includes('<small')) {
+                        const disclaimerDiv = document.createElement('div');
+                        disclaimerDiv.innerHTML = bet;
+                        bettingWindow.appendChild(disclaimerDiv);
+                    } else {
+                        const betMsg = document.createElement('div');
+                        betMsg.className = 'betting-proposal';
+                        betMsg.innerHTML = bet;
+                        bettingWindow.appendChild(betMsg);
 
-            const betButton = document.createElement('button');
-            betButton.className = 'btn btn-success mt-2 mb-2';
-            betButton.textContent = 'Place Bet';
-            betButton.onclick = () => placeBet(data.betting.replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''));
-            bettingWindow.appendChild(betButton);
+                        const betButton = document.createElement('button');
+                        betButton.className = 'btn btn-success mt-2 mb-2';
+                        betButton.textContent = 'Place Bet';
+                        betButton.onclick = () => placeBet(bet);
+                        bettingWindow.appendChild(betButton);
+                    }
+                }
+            });
             scrollBetting();
 
             document.querySelector('input[name="query"]').value = '';

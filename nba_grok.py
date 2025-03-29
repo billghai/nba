@@ -74,7 +74,6 @@ def query_grok(prompt):
     schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-03-31'})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
 
-    # Check for general basketball questions first
     if any(word in query_lower for word in ["how many", "what is", "who", "highest", "score", "won", "finals"]):
         payload = {
             "model": "grok-2-1212",
@@ -96,7 +95,6 @@ def query_grok(prompt):
         except Exception as e:
             return f"Oops! Hit a snag: {str(e)}. Let’s try that again!"
 
-    # Last-game logic for team-specific queries
     for word in ["last", "game", "research", "the", "what", "was", "score", "in", "investiga", "ultimo", "partido"]:
         query_lower = query_lower.replace(word, "").strip()
     for team in TEAM_NAME_MAP:
@@ -131,7 +129,7 @@ def query_grok(prompt):
         return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
         return f"Oops! Something went wonky with the API: {str(e)}"
-# [Imports, TEAM_NAME_MAP, get_last_game, get_next_game, query_grok unchanged—skip to get_betting_odds]
+
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -183,16 +181,16 @@ def get_betting_odds(query=None):
                             remaining_bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending)")
-            betting_output = "<br>".join(bets + remaining_bets[:max(0, 3 - len(bets))])
-            betting_output += "<br><strong><small style='font-size: 8px'>Odds subject to change at betting time—check your provider!</small></strong>"
+            betting_output = "||".join(bets + remaining_bets[:max(0, 3 - len(bets))])
+            betting_output += "||<strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
         
         else:
             for game in top_games[:4]:
                 if game.get("bookmakers") and game["bookmakers"][0].get("markets"):
                     bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                     bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}")
-            betting_output = "<br>".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!<br>"
-            betting_output += "<br><strong><small style='font-size: 8px'>Odds subject to change at betting time—check your provider!</small></strong>"
+            betting_output = "||".join(bets) if len(bets) >= 3 else "Hang tight—odds are coming soon!||"
+            betting_output += "||<strong><small style='font-size: 10px'>Odds subject to change at betting time—check your provider!</small></strong>"
         
         return betting_output
 
@@ -212,7 +210,6 @@ def index():
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
 
 
 # chat URL https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
