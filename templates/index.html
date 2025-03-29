@@ -67,12 +67,8 @@
     <div class="betting-container" id="bettingWindow">
         <h3>Popular NBA Bets</h3>
         {% if popular_bets %}
-            {% for bet in popular_bets.split('\n') %}
-                {% if bet.strip() %}
-                    <div class="betting-proposal">{{ bet }}</div>
-                    <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ bet }}')">Place Bet</button>
-                {% endif %}
-            {% endfor %}
+            <div class="betting-proposal">{{ popular_bets | safe }}</div>
+            <button class="btn btn-success mt-2 mb-2" onclick="placeBet('{{ popular_bets | replace('\n', ' ') | replace('<br>', ' ') }}')">Place Bet</button>
         {% else %}
             <div class="betting-proposal">No upcoming NBA odds available right now.</div>
         {% endif %}
@@ -126,13 +122,13 @@
 
             const betMsg = document.createElement('div');
             betMsg.className = 'betting-proposal';
-            betMsg.textContent = data.betting;
+            betMsg.innerHTML = data.betting;  // Changed from textContent to innerHTML
             bettingWindow.appendChild(betMsg);
 
             const betButton = document.createElement('button');
             betButton.className = 'btn btn-success mt-2 mb-2';
             betButton.textContent = 'Place Bet';
-            betButton.onclick = () => placeBet(data.betting);
+            betButton.onclick = () => placeBet(data.betting.replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''));  // Strip HTML for bet string
             bettingWindow.appendChild(betButton);
             scrollBetting();
 
@@ -140,7 +136,6 @@
         });
 
         function placeBet(bet) {
-            // Mock affiliate link - replace with real one from Bet365, FanDuel, etc.
             const affiliateLink = `https://bet365.com/affiliate?ref=your_affiliate_id&bet=${encodeURIComponent(bet)}`;
             alert(`Redirecting to place bet: ${bet}\n(Mock action - replace with real affiliate link)`);
             window.location.href = affiliateLink;
