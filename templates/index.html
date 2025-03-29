@@ -70,7 +70,18 @@
     </div>
     <div class="betting-container" id="bettingWindow">
         <h3>Popular NBA Bets</h3>
-        <div class="betting-proposal">{{ popular_bets | safe }}</div>
+        {% if popular_bets %}
+            {% set bets = popular_bets.split('<br>') %}
+            {% for bet in bets if bet.strip() and '<small' not in bet %}
+                <div class="betting-proposal">{{ bet | safe }}</div>
+                <button class="btn btn-success bet-button" onclick="placeBet('{{ bet }}')">Place Bet</button>
+            {% endfor %}
+            {% for bet in bets if '<small' in bet %}
+                <div>{{ bet | safe }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="betting-proposal">No upcoming NBA odds available right now.</div>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
