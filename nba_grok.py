@@ -79,12 +79,12 @@ def query_grok(prompt):
             "model": "grok-2-1212",
             "messages": [
                 {"role": "system", "content": (
-                    f"Today’s date is {current_date}. Answer as a basketball expert with a fun, conversational tone. "
-                    f"Use the 7-day schedule only if relevant: {schedule_str}. Otherwise, tap into your full NBA knowledge!"
+                    f"Today’s date is {current_date}. Answer as a basketball expert with a fun, concise tone (50-70 words). "
+                    f"Use the 7-day schedule if relevant: {schedule_str}. Otherwise, use your NBA knowledge!"
                 )},
                 {"role": "user", "content": prompt}
             ],
-            "max_tokens": 500,
+            "max_tokens": 150,
             "temperature": 0.7
         }
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -93,7 +93,7 @@ def query_grok(prompt):
             response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
         except Exception as e:
-            return f"Oops! Hit a snag: {str(e)}. Let’s try that again!"
+            return f"Oops! Hit a snag: {str(e)}. Try again!"
 
     for word in ["last", "game", "research", "the", "what", "was", "score", "in", "investiga", "ultimo", "partido"]:
         query_lower = query_lower.replace(word, "").strip()
@@ -102,24 +102,23 @@ def query_grok(prompt):
             team_name = TEAM_NAME_MAP[team]
             break
     else:
-        return "Sorry, couldn’t catch that team—give me a clearer shot!"
+        return "Sorry, couldn’t catch that team—try again!"
 
     date, home, away, score = get_last_game(team_name)
     if not date:
-        return f"No recent game found for {team_name} in the schedule—maybe they’re dodging the spotlight!"
+        return f"No recent game for {team_name}—they’re hiding!"
 
-    validated_prompt = f"On {date}, {home} played {away} with a score of {score or 'upcoming'}. Provide top scorer and highest assists for {team_name}."
+    validated_prompt = f"On {date}, {home} played {away} with a score of {score or 'upcoming'}. Give top scorer and highest assists for {team_name} in 50-70 words."
     
     payload = {
         "model": "grok-2-1212",
         "messages": [
             {"role": "system", "content": (
-                f"Today’s date is {current_date}. Use the provided game data and this 7-day schedule to provide the top scorer "
-                f"and highest assists for the requested team in a fun, chatty tone. Schedule: {schedule_str}"
+                f"Today’s date is {current_date}. Use game data and this 7-day schedule for a fun, concise answer (50-70 words). Schedule: {schedule_str}"
             )},
             {"role": "user", "content": validated_prompt}
         ],
-        "max_tokens": 500,
+        "max_tokens": 150,
         "temperature": 0.7
     }
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -128,7 +127,7 @@ def query_grok(prompt):
         response.raise_for_status()
         return f"The last game {team_name} played was on {date} against {away if team_name.lower() == home.lower() else home}. The final score was {score or 'still to come'}. {response.json()['choices'][0]['message']['content']}"
     except Exception as e:
-        return f"Oops! Something went wonky with the API: {str(e)}"
+        return f"Oops! API glitch: {str(e)}"
 
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
