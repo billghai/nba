@@ -108,17 +108,17 @@ def query_grok(prompt):
     if not date:
         return f"No recent game for {team_name}—they’re hiding!"
 
-    validated_prompt = f"On {date}, {home} played {away} with a score of {score or 'upcoming'}. Give top scorer and highest assists for {team_name} in 50-70 words."
+    validated_prompt = f"Give top scorer and highest assists for {team_name} from their last game in 30-50 words—keep it fun!"
     
     payload = {
         "model": "grok-2-1212",
         "messages": [
             {"role": "system", "content": (
-                f"Today’s date is {current_date}. Use game data and this 7-day schedule for a fun, concise answer (50-70 words). Schedule: {schedule_str}"
+                f"Today’s date is {current_date}. Use this game data: {team_name} played {away if team_name.lower() == home.lower() else home} on {date}, score {score or 'upcoming'}. Answer in a fun, concise tone (30-50 words) with top scorer and assists only."
             )},
             {"role": "user", "content": validated_prompt}
         ],
-        "max_tokens": 150,
+        "max_tokens": 120,
         "temperature": 0.7
     }
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
