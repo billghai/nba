@@ -53,9 +53,8 @@ def get_next_game(team):
         if date >= today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
-                    if not game.get("score"):  # Skip completed games
-                        logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
-                        return date, game["home"], game["away"]
+                    logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
+                    return date, game["home"], game["away"]
     logging.debug(f"No next game found for {team} in schedule")
     return None, None, None
 
