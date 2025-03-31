@@ -68,23 +68,24 @@ def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     logging.debug(f"Checking next game for {team} from {today}")
     for date in sorted(NBA_SCHEDULE.keys()):
-        if date >= today:
+        if date > today:  # Strict > to skip past games
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
                     return date, game["home"], game["away"]
     logging.debug(f"No next game found for {team} in filtered range—checking full schedule")
-    for date in sorted(NBA_SCHEDULE.keys()):  # Full scan fallback
-        for game in NBA_SCHEDULE[date]:
-            if team.lower() in [game["home"].lower(), game["away"].lower()]:
-                logging.debug(f"Found game in full scan: {date} - {game['home']} vs {game['away']}")
-                return date, game["home"], game["away"]
+    for date in sorted(NBA_SCHEDULE.keys()):
+        if date > today:  # Full scan, still > today
+            for game in NBA_SCHEDULE[date]:
+                if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                    logging.debug(f"Found game in full scan: {date} - {game['home']} vs {game['away']}")
+                    return date, game["home"], game["away"]
     logging.debug(f"No next game found for {team} in full schedule")
     return None, None, None
 
 def query_grok(prompt):
     current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-03-31'})
+    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k > current_date})  # > not >=
     query_lower = prompt.lower().replace("'", "").replace("’", "")
 
     if "next" in query_lower and "game" in query_lower:
@@ -98,7 +99,7 @@ def query_grok(prompt):
                     return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Check back for more details closer to tip-off!"
                 return f"No next game found for {team_name} in the schedule—stay tuned!"
         return "Sorry, couldn’t catch that team—try again!"
-
+   
     if any(word in query_lower for word in ["how many", "what is", "who", "highest", "score", "won", "finals"]):
         payload = {
             "model": "grok-2-1212",
