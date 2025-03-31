@@ -73,7 +73,13 @@ def get_next_game(team):
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
                     return date, game["home"], game["away"]
-    logging.debug(f"No next game found for {team}")
+    logging.debug(f"No next game found for {team} in filtered range—checking full schedule")
+    for date in sorted(NBA_SCHEDULE.keys()):  # Full scan fallback
+        for game in NBA_SCHEDULE[date]:
+            if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                logging.debug(f"Found game in full scan: {date} - {game['home']} vs {game['away']}")
+                return date, game["home"], game["away"]
+    logging.debug(f"No next game found for {team} in full schedule")
     return None, None, None
 
 def query_grok(prompt):
@@ -87,6 +93,8 @@ def query_grok(prompt):
                 team_name = TEAM_NAME_MAP[team]
                 date, home, away = get_next_game(team_name)
                 if date:
+                    if "tell me about" in query_lower:
+                        return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Get ready for some hoops action—should be a blast!"
                     return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Check back for more details closer to tip-off!"
                 return f"No next game found for {team_name} in the schedule—stay tuned!"
         return "Sorry, couldn’t catch that team—try again!"
@@ -225,7 +233,7 @@ def get_betting_odds(query=None):
 def index():
     global USED_GAMES
     if request.method == 'GET':
-        USED_GAMES.clear()  # Reset only on page load
+        USED_GAMES.clear()
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
