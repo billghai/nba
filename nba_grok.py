@@ -76,7 +76,6 @@ def query_grok(prompt):
     schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date and k <= '2025-03-31'})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
 
-    # Handle "next game" queries
     if "next" in query_lower and "game" in query_lower:
         for team in TEAM_NAME_MAP:
             if team in query_lower:
@@ -87,7 +86,6 @@ def query_grok(prompt):
                 return f"No next game found for {team_name} in the schedule—stay tuned!"
         return "Sorry, couldn’t catch that team—try again!"
 
-    # Handle general queries
     if any(word in query_lower for word in ["how many", "what is", "who", "highest", "score", "won", "finals"]):
         payload = {
             "model": "grok-2-1212",
@@ -109,7 +107,6 @@ def query_grok(prompt):
         except Exception as e:
             return f"Oops! Hit a snag: {str(e)}. Try again!"
 
-    # Handle "last game" queries
     for word in ["last", "game", "research", "the", "what", "was", "score", "in", "investiga", "ultimo", "partido"]:
         query_lower = query_lower.replace(word, "").strip()
     for team in TEAM_NAME_MAP:
@@ -154,7 +151,8 @@ def get_betting_odds(query=None):
         today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
         today_games = [g for g in data if g["commence_time"].startswith(today)]
         other_games = [g for g in data if not g["commence_time"].startswith(today)]
-        validated_data = (today_games + other_games)[:10] if len(data) >= 10 else data + [{"home_team": "Mock Team A", "away_team": "Mock Team B", "bookmakers": [{"markets": [{"outcomes": [{"name": "Mock Team A", "price": 1.50}]}]}]} for _ in range(10 - len(data))]
+        real_games = today_games + other_games
+        validated_data = real_games[:10] if len(real_games) >= 10 else real_games
         validated_data.sort(key=lambda x: x["commence_time"] if "commence_time" in x else "9999-12-31")
         top_games = validated_data[:10]
         bets = []
@@ -201,7 +199,7 @@ def get_betting_odds(query=None):
             else:
                 bets.append(f"Next game: Bet on Orlando Magic vs {full_team_name}: {full_team_name} to win @ 1.57 (odds pending){disclaimer}")
                 USED_GAMES.add(f"Orlando Magic vs {full_team_name}".lower())
-            betting_output = "<br><br>".join(bets)
+            betting_output = "<br><br>".join(bets) if bets else f"No betting odds available yet for {full_team_name}!{disclaimer}"
         
         else:
             for game in top_games[:4]:
@@ -211,7 +209,7 @@ def get_betting_odds(query=None):
                         bookmakers = game["bookmakers"][0]["markets"][0]["outcomes"]
                         bets.append(f"Bet on {game['home_team']} vs {game['away_team']}: {bookmakers[0]['name']} to win @ {bookmakers[0]['price']}{disclaimer}")
                         USED_GAMES.add(api_game_key.lower())
-            betting_output = "<br><br>".join(bets) if len(bets) >= 3 else f"Hang tight—odds are coming soon!{disclaimer}"
+            betting_output = "<br><br>".join(bets) if bets else f"Hang tight—odds are coming soon!{disclaimer}"
         
         return betting_output
 
@@ -220,6 +218,8 @@ def get_betting_odds(query=None):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    global USED_GAMES
+    USED_GAMES.clear()  # Reset on page load
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
