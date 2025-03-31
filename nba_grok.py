@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timezone, timedelta
+import logging
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(env_path)
@@ -13,6 +14,7 @@ API_URL = "https://api.x.ai/v1/chat/completions"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 TEAM_NAME_MAP = {
     "lakers": "Los Angeles Lakers",
@@ -64,11 +66,14 @@ def get_last_game(team):
 
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
+    logging.debug(f"Checking next game for {team} from {today}")
     for date in sorted(NBA_SCHEDULE.keys()):
         if date >= today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                    logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
                     return date, game["home"], game["away"]
+    logging.debug(f"No next game found for {team}")
     return None, None, None
 
 def query_grok(prompt):
@@ -219,7 +224,8 @@ def get_betting_odds(query=None):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     global USED_GAMES
-    USED_GAMES.clear()  # Reset on page load
+    if request.method == 'GET':
+        USED_GAMES.clear()  # Reset only on page load
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
