@@ -25,8 +25,7 @@ TEAM_NAME_MAP = {
     "bulls": "Chicago Bulls",
     "kings": "Sacramento Kings",
     "bucks": "Milwaukee Bucks",
-    "suns": "Phoenix Suns",
-    "raptors": "Toronto Raptors",
+    "suns": "Phoenix Suns",    "raptors": "Toronto Raptors",
     "magic": "Orlando Magic",
     "grizzlies": "Memphis Grizzlies",
     "knicks": "New York Knicks",
@@ -88,22 +87,70 @@ def get_next_game(team):
     for date in sorted(NBA_SCHEDULE.keys()):
         if date >= today:  # Back to >= to include today
             for game in NBA_SCHEDULE[date]:
-                if team.lower() in [game["home"].lower(), game["away"].lower()]:
-                    logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
-                    return date, game["home"], game["away"]
-    logging.debug(f"No next game found for {team} in filtered range—checking full schedule")
+ from flask import Flask, request, render_template, jsonify
+import requests
+import os
+from dotenv import load_dotenv
+import json
+from datetime import datetime, timezone, timedelta
+import logging
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
+API_KEY = os.getenv("XAI_API_KEY")
+ODDS_API_KEY = os.getenv("ODDS_API_KEY")
+API_URL = "https://api.x.ai/v1/chat/completions"
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+
+app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+TEAM_NAME_MAP = {
+    "lakers": "Los Angeles Lakers", "jazz": "Utah Jazz", "celtics": "Boston Celtics",
+    "warriors": "Golden State Warriors", "nuggets": "Denver Nuggets", "bulls": "Chicago Bulls",
+    "kings": "Sacramento Kings", "bucks": "Milwaukee Bucks", "suns": "Phoenix Suns",
+    "raptors": "Toronto Raptors", "magic": "Orlando Magic", "grizzlies": "Memphis Grizzlies",
+    "knicks": "New York Knicks", "heat": "Miami Heat", "heats": "Miami Heat",
+    "clippers": "Los Angeles Clippers", "cavaliers": "Cleveland Cavaliers",
+    "mavericks": "Dallas Mavericks", "rockets": "Houston Rockets", "pacers": "Indiana Pacers",
+    "nets": "Brooklyn Nets", "hawks": "Atlanta Hawks", "sixers": "Philadelphia 76ers",
+    "76ers": "Philadelphia 76ers", "spurs": "San Antonio Spurs", "thunder": "Oklahoma City Thunder",
+    "timberwolves": "Minnesota Timberwolves", "blazers": "Portland Trail Blazers",
+    "trail blazers": "Portland Trail Blazers", "pistons": "Detroit Pistons",
+    "hornets": "Charlotte Hornets", "wizards": "Washington Wizards", "pelicans": "New Orleans Pelicans"
+}
+
+SCHEDULE_PATH = os.path.join(os.path.dirname(__file__), 'nba_schedule.json')
+with open(SCHEDULE_PATH, 'r') as f:
+    NBA_SCHEDULE = json.load(f)
+
+USED_GAMES = set()
+
+def get_last_game(team):
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
+    for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
+        if date < today:
+            for game in NBA_SCHEDULE[date]:
+                if team.lower() in [game["home"].lower(), game["away"].lower()] and game.get("score"):
+                    return date, game["home"], game["away"], game.get("score")
+    return None, None, None, None
+
+def get_next_game(team):
+    today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
+    logging.debug(f"Checking next game for {team} from {today}")
     for date in sorted(NBA_SCHEDULE.keys()):
-        if date >= today:  # Full scan with >=
+        if date >= today:
             for game in NBA_SCHEDULE[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
-                    logging.debug(f"Found game in full scan: {date} - {game['home']} vs {game['away']}")
-                    return date, game["home"], game["away"]
-    logging.debug(f"No next game found for {team} in full schedule")
+                    if not game.get("score"):  # Skip completed games
+                        logging.debug(f"Found game: {date} - {game['home']} vs {game['away']}")
+                        return date, game["home"], game["away"]
+    logging.debug(f"No next game found for {team} in schedule")
     return None, None, None
 
 def query_grok(prompt):
     current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date})  # >= again
+    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k >= current_date})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
 
     if "next" in query_lower and "game" in query_lower:
@@ -115,26 +162,8 @@ def query_grok(prompt):
                     if "tell me about" in query_lower:
                         return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Get ready for some hoops action—should be a blast!"
                     return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Check back for more details closer to tip-off!"
-                return f"No next game found for {team_name} in the schedule—stay tuned!"
+                return f"No next game found in schedule—bets suggest a matchup soon, stay tuned!"
         return "Sorry, couldn’t catch that team—try again!"
-     
-def query_grok(prompt):
-    current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule_str = json.dumps({k: v for k, v in NBA_SCHEDULE.items() if k > current_date})  # > not >=
-    query_lower = prompt.lower().replace("'", "").replace("’", "")
-
-    if "next" in query_lower and "game" in query_lower:
-        for team in TEAM_NAME_MAP:
-            if team in query_lower:
-                team_name = TEAM_NAME_MAP[team]
-                date, home, away = get_next_game(team_name)
-                if date:
-                    if "tell me about" in query_lower:
-                        return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Get ready for some hoops action—should be a blast!"
-                    return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Check back for more details closer to tip-off!"
-                return f"No next game found for {team_name} in the schedule—stay tuned!"
-        return "Sorry, couldn’t catch that team—try again!"
-   
 
     if any(word in query_lower for word in ["how many", "what is", "who", "highest", "score", "won", "finals"]):
         payload = {
