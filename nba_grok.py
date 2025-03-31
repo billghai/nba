@@ -42,8 +42,10 @@ def get_last_game(team):
     for date in sorted(NBA_SCHEDULE.keys(), reverse=True):
         if date < today:
             for game in NBA_SCHEDULE[date]:
-                if team.lower() in [game["home"].lower(), game["away"].lower()] and game.get("score"):
+                if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                    logging.debug(f"Found last game: {date} - {game['home']} vs {game['away']}")
                     return date, game["home"], game["away"], game.get("score")
+    logging.debug(f"No recent game found for {team}")
     return None, None, None, None
 
 def get_next_game(team):
@@ -73,6 +75,16 @@ def query_grok(prompt):
                         return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Get ready for some hoops action—should be a blast!"
                     return f"The next {team_name} game is on {date} against {away if team_name.lower() == home.lower() else home}. Check back for more details closer to tip-off!"
                 return f"No next game found in schedule—bets suggest a matchup soon, stay tuned!"
+        return "Sorry, couldn’t catch that team—try again!"
+
+    if "last" in query_lower and "game" in query_lower:
+        for team in TEAM_NAME_MAP:
+            if team in query_lower:
+                team_name = TEAM_NAME_MAP[team]
+                date, home, away, score = get_last_game(team_name)
+                if date:
+                    return f"The last {team_name} game was on {date} against {away if team_name.lower() == home.lower() else home}. Score: {score or 'no score yet'}—wild, right?"
+                return f"No recent game found for {team_name}—they’re keeping it low-key!"
         return "Sorry, couldn’t catch that team—try again!"
 
     if any(word in query_lower for word in ["how many", "what is", "who", "highest", "score", "won", "finals"]):
@@ -107,7 +119,7 @@ def query_grok(prompt):
 
     date, home, away, score = get_last_game(team_name)
     if not date:
-        return f"No recent game for {team_name}—they’re hiding!"
+        return f"No recent game for {team_name}—they’re keeping it low-key!"
 
     validated_prompt = f"Give top scorer and highest assists for {team_name} from their last game in 30-50 words—keep it fun!"
     
