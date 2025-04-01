@@ -62,17 +62,18 @@ def load_schedule_cache():
 
 def get_last_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule = load_schedule_cache()
-    for date in sorted(schedule.keys(), reverse=True):
+    with open('nba_schedule.json', 'r') as f:  # Static for past
+        past_schedule = json.load(f)
+    for date in sorted(past_schedule.keys(), reverse=True):
         if date < today:
-            for game in schedule[date]:
+            for game in past_schedule[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"], game.get("score")
     return None, None, None, None
 
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule = load_schedule_cache()
+    schedule = load_schedule_cache()  # Future from cache
     for date in sorted(schedule.keys()):
         if date >= today:
             for game in schedule[date]:
