@@ -17,7 +17,7 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), 'nba_schedule_cache.json')
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-TEAM_NAME_MAP = {
+TEAM_NAME_MAP = { # Unchanged - looks good
     "lakers": "Los Angeles Lakers", "jazz": "Utah Jazz", "celtics": "Boston Celtics",
     "warriors": "Golden State Warriors", "nuggets": "Denver Nuggets", "bulls": "Chicago Bulls",
     "kings": "Sacramento Kings", "bucks": "Milwaukee Bucks", "suns": "Phoenix Suns",
@@ -42,7 +42,7 @@ def update_schedule_cache():
         games = response.json()
         cache = {}
         for game in games:
-            date = game["commence_time"][:10]  # e.g., "2025-03-31"
+            date = game["commence_time"][:10]
             if date not in cache:
                 cache[date] = []
             cache[date].append({"home": game["home_team"], "away": game["away_team"]})
@@ -59,27 +59,35 @@ def load_schedule_cache():
     except FileNotFoundError:
         update_schedule_cache()
         return load_schedule_cache()
+    except Exception as e:
+        logging.error(f"Cache load error: {str(e)}")
+        return {}
 
 def get_last_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    with open('nba_schedule.json', 'r') as f:  # Static for past
-        past_schedule = json.load(f)
-    for date in sorted(past_schedule.keys(), reverse=True):
-        if date < today:
-            for game in past_schedule[date]:
-                if team.lower() in [game["home"].lower(), game["away"].lower()]:
-                    return date, game["home"], game["away"], game.get("score")
+    try:
+        with open('nba_schedule.json', 'r') as f:
+            past_schedule = json.load(f)
+        for date in sorted(past_schedule.keys(), reverse=True):
+            if date < today:
+                for game in past_schedule[date]:
+                    if team.lower() in [game["home"].lower(), game["away"].lower()]:
+                        return date, game["home"], game["away"], game.get("score")
+    except FileNotFoundError:
+        logging.error("nba_schedule.json not found for past games")
     return None, None, None, None
 
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule = load_schedule_cache()  # Future from cache
+    schedule = load_schedule_cache()
+    logging.debug(f"Cache for {team}: {schedule}")
     for date in sorted(schedule.keys()):
         if date >= today:
             for game in schedule[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"]
-    return None, None, None
+    logging.debug(f"No next game for {team} in cache")
+    return None, None, None  # Fixed typo!
 
 def query_grok(prompt):
     current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
@@ -107,11 +115,29 @@ def query_grok(prompt):
                 return f"No recent game found for {team_name}—they’re keeping it low-key!"
         return "Sorry, couldn’t catch that team—try again!"
 
-    # Rest of query_grok unchanged for brevity...
-
 def get_betting_odds(query=None):
-    # Unchanged for brevity...
-    pass
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
+    try:
+        response = requests.get(ODDS_API_URL, params=params, timeout=5)
+        response.raise_for_status()
+        odds_data = response.json()
+        bets = []
+        for game in odds_data[:3]:  # Top 3 games
+            home = game["home_team"]
+            away = game["away_team"]
+            for bookmaker in game["bookmakers"]:
+                if bookmaker["key"] == "draftkings":  # Pick a bookmaker
+                    for market in bookmaker["markets"]:
+                        if market["key"] == "h2h":
+                            outcomes = market["outcomes"]
+                            bet = f"Next game: Bet on {home} vs {away}: {outcomes[0]['name']} to win @ {outcomes[0]['price']} [disclaimer]"
+                            bets.append(bet)
+                            break
+                    break
+        return "\n".join(bets) if bets else "No betting odds available yet—check back soon!"
+    except Exception as e:
+        logging.error(f"Betting odds error: {str(e)}")
+        return "No upcoming NBA odds available right now."
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -127,7 +153,7 @@ def index():
     return render_template('index.html', popular_bets=popular_bets)
 
 if __name__ == '__main__':
-    update_schedule_cache()  # Initial cache on startup
+    update_schedule_cache()
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
