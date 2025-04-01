@@ -17,7 +17,7 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), 'nba_schedule_cache.json')
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-TEAM_NAME_MAP = { # Unchanged - looks good
+TEAM_NAME_MAP = {
     "lakers": "Los Angeles Lakers", "jazz": "Utah Jazz", "celtics": "Boston Celtics",
     "warriors": "Golden State Warriors", "nuggets": "Denver Nuggets", "bulls": "Chicago Bulls",
     "kings": "Sacramento Kings", "bucks": "Milwaukee Bucks", "suns": "Phoenix Suns",
@@ -41,21 +41,25 @@ def update_schedule_cache():
         response.raise_for_status()
         games = response.json()
         cache = {}
+        today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
         for game in games:
             date = game["commence_time"][:10]
-            if date not in cache:
-                cache[date] = []
-            cache[date].append({"home": game["home_team"], "away": game["away_team"]})
+            if date >= today:
+                if date not in cache:
+                    cache[date] = []
+                cache[date].append({"home": game["home_team"], "away": game["away_team"]})
         with open(CACHE_PATH, 'w') as f:
             json.dump(cache, f)
-        logging.debug("Schedule cache updated successfully")
+        logging.debug(f"Schedule cache updated: {cache}")
     except Exception as e:
         logging.error(f"Cache update failed: {str(e)}")
 
 def load_schedule_cache():
     try:
         with open(CACHE_PATH, 'r') as f:
-            return json.load(f)
+            cache = json.load(f)
+        logging.debug(f"Loaded cache: {cache}")
+        return cache
     except FileNotFoundError:
         update_schedule_cache()
         return load_schedule_cache()
@@ -80,21 +84,16 @@ def get_last_game(team):
 def get_next_game(team):
     today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
     schedule = load_schedule_cache()
-    logging.debug(f"Cache for {team}: {schedule}")
     for date in sorted(schedule.keys()):
         if date >= today:
             for game in schedule[date]:
                 if team.lower() in [game["home"].lower(), game["away"].lower()]:
                     return date, game["home"], game["away"]
     logging.debug(f"No next game for {team} in cache")
-    return None, None, None  # Fixed typo!
+    return None, None, None
 
 def query_grok(prompt):
-    current_date = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')
-    schedule = load_schedule_cache()
-    schedule_str = json.dumps({k: v for k, v in schedule.items() if k >= current_date})
     query_lower = prompt.lower().replace("'", "").replace("’", "")
-
     if "next" in query_lower and "game" in query_lower:
         for team in TEAM_NAME_MAP:
             if team in query_lower:
@@ -122,15 +121,15 @@ def get_betting_odds(query=None):
         response.raise_for_status()
         odds_data = response.json()
         bets = []
-        for game in odds_data[:3]:  # Top 3 games
+        for game in odds_data[:5]:
             home = game["home_team"]
             away = game["away_team"]
             for bookmaker in game["bookmakers"]:
-                if bookmaker["key"] == "draftkings":  # Pick a bookmaker
+                if bookmaker["key"] == "draftkings":
                     for market in bookmaker["markets"]:
                         if market["key"] == "h2h":
                             outcomes = market["outcomes"]
-                            bet = f"Next game: Bet on {home} vs {away}: {outcomes[0]['name']} to win @ {outcomes[0]['price']} [disclaimer]"
+                            bet = f"Next game: Bet on {home} vs {away}: {outcomes[0]['name']} to win @ {outcomes[0]['price']}"
                             bets.append(bet)
                             break
                     break
@@ -144,6 +143,7 @@ def index():
     global USED_GAMES
     if request.method == 'GET':
         USED_GAMES.clear()
+        update_schedule_cache()  # Force refresh on load
     if request.method == 'POST':
         query = request.form['query']
         response = query_grok(query)
@@ -157,4 +157,4 @@ if __name__ == '__main__':
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
 
-# chat URL https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
