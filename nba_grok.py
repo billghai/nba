@@ -35,24 +35,27 @@ TEAM_NAME_MAP = {
 USED_GAMES = set()
 
 def update_schedule_cache():
+    now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
+    today = now.strftime('%Y-%m-%d')
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "daysFrom": 7}
     try:
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         games = response.json()
         cache = {}
-        today = (datetime.now(timezone.utc) - timedelta(hours=7)).strftime('%Y-%m-%d')  # PDT
         for game in games:
-            date = game["commence_time"][:10]
-            if date >= today:
-                if date not in cache:
-                    cache[date] = []
-                cache[date].append({"home": game["home_team"], "away": game["away_team"]})
+            game_time = datetime.strptime(game["commence_time"], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+            game_date_pdt = (game_time - timedelta(hours=7)).strftime('%Y-%m-%d')
+            if game_date_pdt >= today or game_time >= now:  # Include today PDT or future UTC
+                if game_date_pdt not in cache:
+                    cache[game_date_pdt] = []
+                cache[game_date_pdt].append({"home": game["home_team"], "away": game["away_team"]})
         with open(CACHE_PATH, 'w') as f:
             json.dump(cache, f)
         logging.debug(f"Schedule cache updated: {cache}")
     except Exception as e:
         logging.error(f"Cache update failed: {str(e)}")
+
 
 def load_schedule_cache():
     try:
