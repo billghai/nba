@@ -60,9 +60,7 @@ def update_schedule_cache():
 def load_schedule_cache():
     try:
         with open(CACHE_PATH, 'r') as f:
-            cache = json.load(f)
-        logging.debug(f"Loaded cache: {cache}")
-        return cache
+            return json.load(f)
     except FileNotFoundError:
         update_schedule_cache()
         return load_schedule_cache()
