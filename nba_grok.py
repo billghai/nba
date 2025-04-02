@@ -40,7 +40,6 @@ def get_game_info(query):
             cache = json.load(f)
     except:
         cache = {}
-    # Hardcoded Grok 3 data for >24h
     grok_data = {
         '2025-03-31': [
             {"home": "Memphis Grizzlies", "away": "Boston Celtics"},
@@ -69,8 +68,6 @@ def get_game_info(query):
                         return f"Grok says: The last {team} game was on {date} against {game['away' if team == game['home'] else 'home']}..."
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
-
-# ... get_betting_odds and Flask routes unchanged ...
 
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
@@ -108,7 +105,10 @@ def index():
     return render_template('index.html', popular_bets=popular_bets)
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
+    logging.debug("Script starting...")
+    update_schedule_cache()
     app.run(host='0.0.0.0', port=10000)
 
 # https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# 0401 8:51PM
