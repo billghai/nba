@@ -52,57 +52,59 @@ def get_game_info(query):
     grok_data = {
         '2025-03-31': [
             {"home": "Memphis Grizzlies", "away": "Boston Celtics"},
-            {"home": "Orlando Magic", "away": "Los Angeles Clippers"},
-            {"home": "New York Knicks", "away": "Oklahoma City Thunder"}
+            {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
         ],
         '2025-04-01': [
             {"home": "Los Angeles Lakers", "away": "Houston Rockets"}
         ]
     }
-    query_lower = query.lower()
+    query_lower = query.lower().replace("research", "").replace("tell me about", "").strip()
     all_games = {**grok_data, **cache}
     if "next" in query_lower:
         for date in sorted(all_games.keys()):
             for game in all_games[date]:
-                if "celtics" in query_lower and "celtics" in (game["home"].lower() + game["away"].lower()):
+                home_lower = game["home"].lower()
+                away_lower = game["away"].lower()
+                if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
-                        continue  # Skip past games for "next"
-                    return f"The next {team} game is on {date} against {opponent}—check back for more details closer to tip-off!"
-                elif "lakers" in query_lower and "lakers" in (game["home"].lower() + game["away"].lower()):
+                        continue
+                    return f"The next {team} game is on {date} against {opponent}—check back for more details!"
+                elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Los Angeles Lakers"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
-                        continue  # Skip past games for "next"
-                    return f"The next {team} game is on {date} against {opponent}—check back for more details closer to tip-off!"
+                        continue
+                    return f"The next {team} game is on {date} against {opponent}—check back for more details!"
         return "No next game found in schedule—bets suggest a matchup soon, stay tuned!"
     elif "last" in query_lower:
         for date in sorted(all_games.keys(), reverse=True):
             for game in all_games[date]:
-                if "celtics" in query_lower and "celtics" in (game["home"].lower() + game["away"].lower()):
+                home_lower = game["home"].lower()
+                away_lower = game["away"].lower()
+                if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
-                elif "lakers" in query_lower and "lakers" in (game["home"].lower() + game["away"].lower()):
+                elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Los Angeles Lakers"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
-                elif "knicks" in query_lower and "knicks" in (game["home"].lower() + game["away"].lower()):
+                elif "jazz" in query_lower and ("jazz" in home_lower or "jazz" in away_lower):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    team = "New York Knicks"
+                    team = "Utah Jazz"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
-
 
 
 def get_betting_odds(query=None):
