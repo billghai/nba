@@ -29,22 +29,10 @@ def update_schedule_cache():
         with open(CACHE_PATH, 'w') as f:
             json.dump(cache, f)
         logging.debug(f"Schedule cache updated: {cache}")
-        return cache  # For immediate use
+        return cache
     except Exception as e:
         logging.error(f"Cache update failed: {str(e)}")
         raise
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    cache = update_schedule_cache()
-    popular_bets = get_betting_odds()
-    if request.method == 'POST':
-        query = request.form['query']
-        response = get_game_info(query)
-        betting = get_betting_odds(query)
-        return jsonify({'response': response, 'betting': betting})
-    return render_template('index.html', popular_bets=popular_bets)
-
 
 def get_game_info(query):
     now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
@@ -106,13 +94,10 @@ def get_betting_odds(query=None):
         logging.error(f"Betting odds error: {str(e)}")
         return "No upcoming NBA odds available right now."
 
-# Force Render refresh - April 1 9:55 PM PDT
+# Force Render refresh - April 1 10:35 PM PDT
 @app.route('/', methods=['GET', 'POST'])
 def index():
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    update_schedule_cache()
+    cache = update_schedule_cache()
     popular_bets = get_betting_odds()
     if request.method == 'POST':
         query = request.form['query']
@@ -126,6 +111,5 @@ if __name__ == '__main__':
     logging.debug("Script starting...")
     update_schedule_cache()
     app.run(host='0.0.0.0', port=10000)
-
 # https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
-# 0401 8:51PM
+# 0401 9:35
