@@ -46,7 +46,7 @@ def update_schedule_cache():
         for game in games:
             game_time = datetime.strptime(game["commence_time"], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
             game_date_pdt = (game_time - timedelta(hours=7)).strftime('%Y-%m-%d')
-            if game_date_pdt >= today or game_time >= now:  # Include today PDT or future UTC
+            if game_time >= now - timedelta(days=1):  # Last 24h UTC
                 if game_date_pdt not in cache:
                     cache[game_date_pdt] = []
                 cache[game_date_pdt].append({"home": game["home_team"], "away": game["away_team"]})
@@ -134,7 +134,7 @@ def get_betting_odds(query=None):
                             bets.append(bet)
                             break
                     break
-        return "\n".join(bets) if bets else "No betting odds available yet—check back soon!"
+        return "<br><br>".join(bets) if bets else "No betting odds available yet—check back soon!"
     except Exception as e:
         logging.error(f"Betting odds error: {str(e)}")
         return "No upcoming NBA odds available right now."
