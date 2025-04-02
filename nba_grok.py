@@ -56,7 +56,8 @@ def get_game_info(query):
             {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
         ],
         '2025-04-01': [
-            {"home": "Los Angeles Lakers", "away": "Houston Rockets"}
+            {"home": "Los Angeles Lakers", "away": "Houston Rockets"},
+            {"home": "Phoenix Suns", "away": "Boston Celtics"}
         ]
     }
     query_lower = query.lower().replace("research", "").replace("tell me about", "").strip()
@@ -70,10 +71,15 @@ def get_game_info(query):
                 if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if date >= today:  # Include today
+                    if date >= today:
                         return f"The next {team} game is on {date} against {opponent}—check back for more details!"
                 elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
                     team = "Los Angeles Lakers"
+                    opponent = game['away'] if team == game['home'] else game['home']
+                    if date >= today:
+                        return f"The next {team} game is on {date} against {opponent}—check back for more details!"
+                elif "suns" in query_lower and ("suns" in home_lower or "suns" in away_lower):
+                    team = "Phoenix Suns"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if date >= today:
                         return f"The next {team} game is on {date} against {opponent}—check back for more details!"
@@ -94,8 +100,13 @@ def get_game_info(query):
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
-                elif "jazz" in query_lower and ("jazz" in home_lower or "jazz" in away_lower):
-                    team = "Utah Jazz"
+                elif "suns" in query_lower and ("suns" in home_lower or "suns" in away_lower):
+                    team = "Phoenix Suns"
+                    opponent = game['away'] if team == game['home'] else game['home']
+                    if game_time < now:
+                        return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
+                elif "heat" in query_lower and ("heat" in home_lower or "heat" in away_lower):
+                    team = "Miami Heat"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
