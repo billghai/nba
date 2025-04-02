@@ -43,7 +43,7 @@ def update_schedule_cache():
         raise
 
 def get_game_info(query):
-    now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
+    now = datetime.now(timezone.utc) - timedelta(hours=7)
     try:
         with open(CACHE_PATH, 'r') as f:
             cache = json.load(f)
@@ -53,30 +53,43 @@ def get_game_info(query):
         '2025-03-31': [
             {"home": "Memphis Grizzlies", "away": "Boston Celtics"},
             {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
+        ],
+        '2025-04-01': [
+            {"home": "Los Angeles Lakers", "away": "Houston Rockets"}
         ]
     }
-    if "next" in query.lower():
-        all_games = {**grok_data, **cache}
+    query_lower = query.lower()
+    all_games = {**grok_data, **cache}
+    if "next" in query_lower:
         for date in sorted(all_games.keys()):
             for game in all_games[date]:
-                if any(team.lower() in query.lower() for team in [game["home"], game["away"]]):
+                if "celtics" in query_lower and "celtics" in (game["home"].lower() + game["away"].lower()):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    team = next(t for t in [game["home"], game["away"]] if t.lower() in query.lower())
+                    team = "Boston Celtics"
+                    opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now - timedelta(hours=24):
-                        return f"Grok says: The next {team} game was on {date} against {game['away' if team == game['home'] else 'home']}—check back for updates!"
-                    return f"The next {team} game is on {date} against {game['away' if team == game['home'] else 'home']}—check back for more details closer to tip-off!"
+                        return f"Grok says: The next {team} game was on {date} against {opponent}—check back for updates!"
+                    return f"The next {team} game is on {date} against {opponent}—check back for more details closer to tip-off!"
+                elif "lakers" in query_lower and "lakers" in (game["home"].lower() + game["away"].lower()):
+                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
+                    team = "Los Angeles Lakers"
+                    opponent = game['away'] if team == game['home'] else game['home']
+                    if game_time < now - timedelta(hours=24):
+                        return f"Grok says: The next {team} game was on {date} against {opponent}—check back for updates!"
+                    return f"The next {team} game is on {date} against {opponent}—check back for more details closer to tip-off!"
         return "No next game found in schedule—bets suggest a matchup soon, stay tuned!"
-    elif "last" in query.lower():
-        all_games = {**grok_data, **cache}
+    elif "last" in query_lower:
         for date in sorted(all_games.keys(), reverse=True):
             for game in all_games[date]:
-                if any(team.lower() in query.lower() for team in [game["home"], game["away"]]):
+                if "lakers" in query_lower and "lakers" in (game["home"].lower() + game["away"].lower()):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    team = next(t for t in [game["home"], game["away"]] if t.lower() in query.lower())
+                    team = "Los Angeles Lakers"
+                    opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now - timedelta(hours=24):
-                        return f"Grok says: The last {team} game was on {date} against {game['away' if team == game['home'] else 'home']}—score not available yet, wild right?"
+                        return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
+
 
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
