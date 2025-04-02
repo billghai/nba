@@ -106,6 +106,10 @@ def get_betting_odds(query=None):
         logging.error(f"Betting odds error: {str(e)}")
         return "No upcoming NBA odds available right now."
 
+# Force Render refresh - April 1 9:55 PM PDT
+@app.route('/', methods=['GET', 'POST'])
+def index():
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     update_schedule_cache()
