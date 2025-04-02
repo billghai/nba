@@ -18,7 +18,15 @@ def update_schedule_cache():
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         games = response.json()
-        cache = {}
+        cache = {
+            '2025-03-31': [
+                {"home": "Memphis Grizzlies", "away": "Boston Celtics"},
+                {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
+            ],
+            '2025-04-01': [
+                {"home": "Los Angeles Lakers", "away": "Houston Rockets"}
+            ]
+        }
         for game in games:
             game_time = datetime.strptime(game["commence_time"], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
             game_date_pdt = (game_time - timedelta(hours=7)).strftime('%Y-%m-%d')
