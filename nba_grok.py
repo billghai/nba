@@ -14,6 +14,7 @@ def update_schedule_cache():
     today = now.strftime('%Y-%m-%d')
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "daysFrom": 7}
     try:
+        logging.debug("Starting cache update...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
         response.raise_for_status()
         games = response.json()
@@ -21,7 +22,7 @@ def update_schedule_cache():
         for game in games:
             game_time = datetime.strptime(game["commence_time"], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
             game_date_pdt = (game_time - timedelta(hours=7)).strftime('%Y-%m-%d')
-            if game_date_pdt >= today:  # Today PDT onward
+            if game_date_pdt >= today:
                 if game_date_pdt not in cache:
                     cache[game_date_pdt] = []
                 cache[game_date_pdt].append({"home": game["home_team"], "away": game["away_team"]})
@@ -30,30 +31,46 @@ def update_schedule_cache():
         logging.debug(f"Schedule cache updated: {cache}")
     except Exception as e:
         logging.error(f"Cache update failed: {str(e)}")
+        raise
 
 def get_game_info(query):
     now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
-    with open(CACHE_PATH, 'r') as f:
-        cache = json.load(f)
+    try:
+        with open(CACHE_PATH, 'r') as f:
+            cache = json.load(f)
+    except:
+        cache = {}
+    # Hardcoded Grok 3 data for >24h
+    grok_data = {
+        '2025-03-31': [
+            {"home": "Memphis Grizzlies", "away": "Boston Celtics"},
+            {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
+        ]
+    }
     if "next" in query:
-        for date in sorted(cache.keys()):
-            for game in cache[date]:
+        all_games = {**grok_data, **cache}
+        for date in sorted(all_games.keys()):
+            for game in all_games[date]:
                 if any(team in query for team in [game["home"], game["away"]]):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    if game_time >= now - timedelta(hours=24):  # Within 24h
-                        return f"The next {game['home']} game is on {date} against {game['away']}..."
-                    else:  # Older than 24h, use Grok
-                        return f"Grok says: The next game for that team was on {date} against {game['away']}..."
+                    team = next(t for t in [game["home"], game["away"]] if t in query)
+                    if game_time < now - timedelta(hours=24):
+                        return f"Grok says: The next {team} game was on {date} against {game['away' if team == game['home'] else 'home']}..."
+                    return f"The next {team} game is on {date} against {game['away' if team == game['home'] else 'home']}..."
         return "No next game found in schedule—check back!"
     elif "last" in query:
-        for date in sorted(cache.keys(), reverse=True):
-            for game in cache[date]:
+        all_games = {**grok_data, **cache}
+        for date in sorted(all_games.keys(), reverse=True):
+            for game in all_games[date]:
                 if any(team in query for team in [game["home"], game["away"]]):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    if game_time < now - timedelta(hours=24):  # Older than 24h
-                        return f"Grok says: The last {game['home']} game was on {date} against {game['away']}..."
+                    team = next(t for t in [game["home"], game["away"]] if t in query)
+                    if game_time < now - timedelta(hours=24):
+                        return f"Grok says: The last {team} game was on {date} against {game['away' if team == game['home'] else 'home']}..."
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
+
+# ... get_betting_odds and Flask routes unchanged ...
 
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
