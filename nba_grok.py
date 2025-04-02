@@ -29,9 +29,22 @@ def update_schedule_cache():
         with open(CACHE_PATH, 'w') as f:
             json.dump(cache, f)
         logging.debug(f"Schedule cache updated: {cache}")
+        return cache  # For immediate use
     except Exception as e:
         logging.error(f"Cache update failed: {str(e)}")
         raise
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    cache = update_schedule_cache()
+    popular_bets = get_betting_odds()
+    if request.method == 'POST':
+        query = request.form['query']
+        response = get_game_info(query)
+        betting = get_betting_odds(query)
+        return jsonify({'response': response, 'betting': betting})
+    return render_template('index.html', popular_bets=popular_bets)
+
 
 def get_game_info(query):
     now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
