@@ -44,6 +44,7 @@ def update_schedule_cache():
 
 def get_game_info(query):
     now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
+    today = now.strftime('%Y-%m-%d')
     try:
         with open(CACHE_PATH, 'r') as f:
             cache = json.load(f)
@@ -65,47 +66,41 @@ def get_game_info(query):
             for game in all_games[date]:
                 home_lower = game["home"].lower()
                 away_lower = game["away"].lower()
+                game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                 if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
-                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if game_time < now:
-                        continue
-                    return f"The next {team} game is on {date} against {opponent}—check back for more details!"
+                    if date >= today:  # Include today
+                        return f"The next {team} game is on {date} against {opponent}—check back for more details!"
                 elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
-                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Los Angeles Lakers"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if game_time < now:
-                        continue
-                    return f"The next {team} game is on {date} against {opponent}—check back for more details!"
+                    if date >= today:
+                        return f"The next {team} game is on {date} against {opponent}—check back for more details!"
         return "No next game found in schedule—bets suggest a matchup soon, stay tuned!"
     elif "last" in query_lower:
         for date in sorted(all_games.keys(), reverse=True):
             for game in all_games[date]:
                 home_lower = game["home"].lower()
                 away_lower = game["away"].lower()
+                game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                 if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
-                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
                 elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
-                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Los Angeles Lakers"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
                 elif "jazz" in query_lower and ("jazz" in home_lower or "jazz" in away_lower):
-                    game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
                     team = "Utah Jazz"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
-
 
 def get_betting_odds(query=None):
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
