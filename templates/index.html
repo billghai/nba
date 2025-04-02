@@ -50,6 +50,11 @@
             border-radius: 5px;
             margin-bottom: 10px;
         }
+        .bet-disclaimer {
+            font-size: 0.8em;
+            color: #d4edda;
+            margin-top: 5px;
+        }
         .chat-input {
             margin-top: auto;
             display: flex;
@@ -68,20 +73,22 @@
             <button type="submit" class="btn btn-primary ms-2">Ask</button>
         </form>
     </div>
-    <div id="popularBets">
-{% if popular_bets %}
-    {% set bets = popular_bets.split('<br><br>') %}
-    {% for bet in bets if bet.strip() %}
-        <div class="betting-proposal">
-            <div>{{ bet | safe }}</div>
-            <div style="font-size: 0.8em; color: #d4edda;">Disclaimer: Odds are for entertainment only—not a financial adviser!</div>
+    <div class="betting-container" id="bettingWindow">
+        <h3>Popular NBA Bets</h3>
+        <div id="popularBets">
+        {% if popular_bets %}
+            {% set bets = popular_bets.split('<br><br>') %}
+            {% for bet in bets if bet.strip() %}
+                <div class="betting-proposal">
+                    <div>{{ bet | safe }}</div>
+                    <div class="bet-disclaimer">Disclaimer: Odds are for entertainment only—not a financial adviser!</div>
+                </div>
+                <button class="btn btn-success bet-button" onclick="placeBet('{{ bet.split('<br>')[0] }}')">Place Bet</button>
+            {% endfor %}
+        {% else %}
+            <div class="betting-proposal">No upcoming NBA odds available right now.</div>
+        {% endif %}
         </div>
-        <button class="btn btn-success bet-button" onclick="placeBet('{{ bet.split('<br>')[0] }}')">Place Bet</button>
-    {% endfor %}
-{% else %}
-    <div class="betting-proposal">No upcoming NBA odds available right now.</div>
-{% endif %}
-</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
@@ -118,35 +125,44 @@
             trackerMsg.textContent = `You asked: ${query}`;
             bettingWindow.insertBefore(trackerMsg, popularBets);
 
-            const res = await fetch('/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `query=${encodeURIComponent(query)}`
-            });
-            const data = await res.json();
+            try {
+                const res = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `query=${encodeURIComponent(query)}`
+                });
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                const data = await res.json();
+                const grokMsg = document.createElement('div');
+                grokMsg.className = 'message grok-message';
+                grokMsg.textContent = data.response;
+                chatWindow.insertBefore(grokMsg, document.getElementById('chatForm'));
+                scrollChat();
 
-            const grokMsg = document.createElement('div');
-            grokMsg.className = 'message grok-message';
-            grokMsg.textContent = data.response;
-            chatWindow.insertBefore(grokMsg, document.getElementById('chatForm'));
-            scrollChat();
+                const bets = data.betting.split('<br><br>');
+                bets.forEach(bet => {
+                    if (bet.trim()) {
+                        const betDiv = document.createElement('div');
+                        betDiv.className = 'betting-proposal';
+                        betDiv.innerHTML = bet + '<div class="bet-disclaimer">Disclaimer: Odds are for entertainment only—not a financial adviser!</div>';
+                        bettingWindow.insertBefore(betDiv, popularBets);
 
-            const bets = data.betting.split('<br><br>');
-            bets.forEach(bet => {
-                if (bet.trim()) {
-                    const betDiv = document.createElement('div');
-                    betDiv.className = 'betting-proposal';
-                    betDiv.innerHTML = bet;
-                    bettingWindow.insertBefore(betDiv, popularBets);
-
-                    const betButton = document.createElement('button');
-                    betButton.className = 'btn btn-success bet-button';
-                    betButton.textContent = 'Place Bet';
-                    betButton.onclick = () => placeBet(bet.split('<br>')[0]);
-                    bettingWindow.insertBefore(betButton, popularBets);
-                }
-            });
-            scrollBetting();
+                        const betButton = document.createElement('button');
+                        betButton.className = 'btn btn-success bet-button';
+                        betButton.textContent = 'Place Bet';
+                        betButton.onclick = () => placeBet(bet.split('<br>')[0]);
+                        bettingWindow.insertBefore(betButton, popularBets);
+                    }
+                });
+                scrollBetting();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message grok-message';
+                errorMsg.textContent = 'Oops, something went wrong—try again!';
+                chatWindow.insertBefore(errorMsg, document.getElementById('chatForm'));
+                scrollChat();
+            }
 
             document.querySelector('input[name="query"]').value = '';
         });

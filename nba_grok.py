@@ -55,26 +55,26 @@ def get_game_info(query):
             {"home": "Orlando Magic", "away": "Los Angeles Clippers"}
         ]
     }
-    if "next" in query:
+    if "next" in query.lower():
         all_games = {**grok_data, **cache}
         for date in sorted(all_games.keys()):
             for game in all_games[date]:
-                if any(team in query for team in [game["home"], game["away"]]):
+                if any(team.lower() in query.lower() for team in [game["home"], game["away"]]):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    team = next(t for t in [game["home"], game["away"]] if t in query)
+                    team = next(t for t in [game["home"], game["away"]] if t.lower() in query.lower())
                     if game_time < now - timedelta(hours=24):
-                        return f"Grok says: The next {team} game was on {date} against {game['away' if team == game['home'] else 'home']}..."
-                    return f"The next {team} game is on {date} against {game['away' if team == game['home'] else 'home']}..."
-        return "No next game found in schedule—check back!"
-    elif "last" in query:
+                        return f"Grok says: The next {team} game was on {date} against {game['away' if team == game['home'] else 'home']}—check back for updates!"
+                    return f"The next {team} game is on {date} against {game['away' if team == game['home'] else 'home']}—check back for more details closer to tip-off!"
+        return "No next game found in schedule—bets suggest a matchup soon, stay tuned!"
+    elif "last" in query.lower():
         all_games = {**grok_data, **cache}
         for date in sorted(all_games.keys(), reverse=True):
             for game in all_games[date]:
-                if any(team in query for team in [game["home"], game["away"]]):
+                if any(team.lower() in query.lower() for team in [game["home"], game["away"]]):
                     game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-                    team = next(t for t in [game["home"], game["away"]] if t in query)
+                    team = next(t for t in [game["home"], game["away"]] if t.lower() in query.lower())
                     if game_time < now - timedelta(hours=24):
-                        return f"Grok says: The last {team} game was on {date} against {game['away' if team == game['home'] else 'home']}..."
+                        return f"Grok says: The last {team} game was on {date} against {game['away' if team == game['home'] else 'home']}—score not available yet, wild right?"
         return "No last game found—try again later!"
     return "Query unclear—try 'next Lakers game' or 'last Spurs game'!"
 
@@ -102,22 +102,25 @@ def get_betting_odds(query=None):
         logging.error(f"Betting odds error: {str(e)}")
         return "No upcoming NBA odds available right now."
 
-# Force Render refresh - April 1 10:35 PM PDT
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    cache = update_schedule_cache()
-    popular_bets = get_betting_odds()
-    if request.method == 'POST':
-        query = request.form['query']
-        response = get_game_info(query)
-        betting = get_betting_odds(query)
-        return jsonify({'response': response, 'betting': betting})
-    return render_template('index.html', popular_bets=popular_bets)
+    try:
+        cache = update_schedule_cache()
+        popular_bets = get_betting_odds()
+        if request.method == 'POST':
+            query = request.form.get('query', '')
+            logging.debug(f"Received POST query: {query}")
+            response = get_game_info(query)
+            betting = get_betting_odds(query)
+            logging.debug(f"POST response: {response}, betting: {betting}")
+            return jsonify({'response': response, 'betting': betting})
+        return render_template('index.html', popular_bets=popular_bets)
+    except Exception as e:
+        logging.error(f"Index error: {str(e)}")
+        return jsonify({'response': 'Oops, something broke!', 'betting': ''}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')
     logging.debug("Script starting...")
     update_schedule_cache()
     app.run(host='0.0.0.0', port=10000)
-# https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
-# 0402 10:00AM
