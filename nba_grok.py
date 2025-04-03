@@ -31,6 +31,7 @@ def update_schedule():
         data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT)")
         for event in data.get('events', []):
             date = event['date'][:10]
             home = event['competitions'][0]['competitors'][0]['team']['displayName']
@@ -40,6 +41,8 @@ def update_schedule():
             score = f"{event['competitions'][0]['competitors'][0]['score']} - {event['competitions'][0]['competitors'][1]['score']}" if status == "over" else ""
             c.execute("INSERT OR REPLACE INTO games (date, home, away, odds, status, score) VALUES (?, ?, ?, ?, ?, ?)",
                       (date, home, away, "", status, score))
+        c.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
+                  ("last_schedule_update", now.strftime("%Y-%m-%d %H:%M:%S PDT")))
         conn.commit()
         conn.close()
         logging.debug("Schedule updated in database.")
@@ -70,6 +73,9 @@ def update_odds():
             if odds:
                 c.execute("UPDATE games SET odds = ? WHERE date = ? AND home = ? AND away = ?",
                           (odds, date, home, away))
+        now = datetime.now(timezone.utc) - timedelta(hours=7)
+        c.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
+                  ("last_odds_update", now.strftime("%Y-%m-%d %H:%M:%S PDT")))
         conn.commit()
         conn.close()
         logging.debug("Odds updated in database.")
@@ -77,11 +83,13 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("research", "").replace("the", "").replace("game", "").strip()
+    query_lower = query.lower().replace("research", "").replace("the", "").replace("game", "").replace("tell me about", "").strip()
+    logging.debug(f"Parsed query: {query_lower}")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT date, home, away, status, score FROM games")
     games = c.fetchall()
+    logging.debug(f"Games in database: {[(g[0], g[1], g[2], g[3]) for g in games]}")
     conn.close()
 
     now = datetime.now(timezone.utc) - timedelta(hours=7)
@@ -90,7 +98,7 @@ def get_chat_response(query):
         if "last" in query_lower and game_time < now:
             if home.lower() in query_lower or away.lower() in query_lower:
                 return f"Hey! The last {home} vs {away} game on {date} ended {score if score else '—score’s still coming in!'}. What’d you think of that one?"
-        elif "next" in query_lower and game_time > now:
+        elif "next" in query_lower and (game_time > now or (game_time.date() == now.date() and status == "pending")):
             if home.lower() in query_lower or away.lower() in query_lower:
                 return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
     return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
@@ -101,8 +109,13 @@ def get_popular_odds():
     c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 5",
               (datetime.now(timezone.utc).strftime('%Y-%m-%d'),))
     bets = [f"{row[1]} vs {row[2]} on {row[0]}: {row[3]}" for row in c.fetchall()]
+    c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
+    odds_time = c.fetchone()[0] if c.rowcount > 0 else "Unknown"
+    c.execute("SELECT value FROM metadata WHERE key = 'last_schedule_update'")
+    schedule_time = c.fetchone()[0] if c.rowcount > 0 else "Unknown"
     conn.close()
-    return "<br><br>".join(bets) if bets else "No odds yet—check back soon!"
+    bets_str = "<br><br>".join(bets) if bets else "No odds yet—check back soon!"
+    return f"{bets_str}<br><br>Data updated - Schedule: {schedule_time}, Odds: {odds_time}"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -121,4 +134,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-#new 10:24 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+#new 10:35 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
