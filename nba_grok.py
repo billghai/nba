@@ -89,19 +89,21 @@ def get_chat_response(query):
     c = conn.cursor()
     c.execute("SELECT date, home, away, status, score FROM games")
     games = c.fetchall()
-    logging.debug(f"Games in database: {[(g[0], g[1], g[2], g[3]) for g in games]}")
+    logging.debug(f"Games in database: {[(g[0], g[1], g[2], g[3], g[4]) for g in games]}")
     conn.close()
 
+    debug_dump = "Database dump:\n" + "\n".join([f"{g[0]}: {g[1]} vs {g[2]} ({g[3]}, {g[4]})" for g in games])
     now = datetime.now(timezone.utc) - timedelta(hours=7)
     for date, home, away, status, score in sorted(games, key=lambda x: x[0]):
         game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
+        query_team = next((full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower), query_lower)
         if "last" in query_lower and game_time < now:
-            if home.lower() in query_lower or away.lower() in query_lower:
+            if query_team.lower() in home.lower() or query_team.lower() in away.lower():
                 return f"Hey! The last {home} vs {away} game on {date} ended {score if score else '—score’s still coming in!'}. What’d you think of that one?"
         elif "next" in query_lower and (game_time > now or (game_time.date() == now.date() and status == "pending")):
-            if home.lower() in query_lower or away.lower() in query_lower:
+            if query_team.lower() in home.lower() or query_team.lower() in away.lower():
                 return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
-    return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
+    return f"Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?\n\n{debug_dump}"
 
 def get_popular_odds():
     conn = sqlite3.connect(DB_PATH)
