@@ -133,14 +133,18 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("research", "").replace("the", "").replace("game", "").replace("tell me about", "").strip()
+    query_lower = query.lower().replace("bset", "best").replace("research", "").replace("the", "").replace("game", "").replace("tell me about", "").strip()
     logging.debug(f"Parsed query: {query_lower}")
     
     if "last" not in query_lower and "next" not in query_lower:
         if "lebron" in query_lower or "james" in query_lower:
             return "LeBron’s been killing it—averaging around 25 points, 8 rebounds, and 7 assists lately. He’s the NBA’s all-time leading scorer with over 41,000 points as of early 2025. What do you think of his legacy?"
-        elif "highest" in query_lower and ("scorer" in query_lower or "goal" in query_lower):
-            return "LeBron James is the NBA’s all-time leading scorer with over 41,000 points as of January 2025, passing Kareem Abdul-Jabbar in 2023. Want to talk about his stats or someone else?"
+        elif "highest" in query_lower and ("scorer" in query_lower or "goal" in query_lower) or "best scorer" in query_lower:
+            return "As of April 2025, Shai Gilgeous-Alexander’s leading the league with around 32.8 points per game this season—pretty clutch stuff! What’s your take on him?"
+        elif "best shooter" in query_lower:
+            if "jazz" in query_lower:
+                return "Jordan Clarkson’s probably the best shooter for the Utah Jazz right now—averaging around 2.4 threes per game this season. Thoughts on his game?"
+            return "I’d need a team to pinpoint the best shooter—give me one, and I’ll hook you up with the details!"
         elif "standings" in query_lower:
             return "I can’t pull exact standings right now, but as of early April 2025, the top teams are fighting for playoff spots. Want me to dig into a specific team?"
         return "I’m not seeing a last or next game query here. Ask me anything about the NBA—I’ve got plenty to chat about!"
@@ -176,6 +180,7 @@ def get_chat_response(query):
                 if query_team.lower() in home.lower() or query_team.lower() in away.lower():
                     template = random.choice(next_variations)
                     return template.format(home=home, away=away, date=date)
+                break  # Stop at first future game
         return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
     except Exception as e:
         logging.error(f"Chat response error: {str(e)}")
@@ -221,4 +226,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
   
 
-# newdesign team aliases 12:10 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# newdesign team aliases 2:00PM 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
