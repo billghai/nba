@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 import requests
 import logging
+import random
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -94,6 +95,14 @@ def update_odds():
 def get_chat_response(query):
     query_lower = query.lower().replace("research", "").replace("the", "").replace("game", "").replace("tell me about", "").strip()
     logging.debug(f"Parsed query: {query_lower}")
+    
+    if "last" not in query_lower and "next" not in query_lower:
+        if "lebron" in query_lower or "james" in query_lower:
+            return "LeBron’s been killing it this season—averaging around 25 points, 8 rebounds, and 7 assists lately. What do you think of his play?"
+        elif "standings" in query_lower:
+            return "I can’t pull exact standings right now, but as of early April 2025, the top teams are jostling for playoff spots. Want me to dig into a specific team?"
+        return "I’m not seeing a last or next game query here. Ask me anything about the NBA—I’ve got plenty to chat about!"
+
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -103,15 +112,28 @@ def get_chat_response(query):
         conn.close()
 
         now = datetime.now(timezone.utc) - timedelta(hours=7)
+        next_variations = [
+            "Yo, the next {home} vs {away} game’s on {date}. Gonna be a banger—what’s your take?",
+            "Hey, {home} takes on {away} next on {date}. Any hot predictions?",
+            "Next up, {home} vs {away} on {date}. Should be wild—thoughts?"
+        ]
+        last_variations = [
+            "Hey! The last {home} vs {away} game on {date} ended {score}. How’d you rate that one?",
+            "Yo, {home} vs {away} last time on {date} was {score}. What’s your vibe on it?",
+            "Last game, {home} vs {away} on {date} finished {score}. Cool or nah?"
+        ]
+
         for date, home, away, status, score in sorted(games, key=lambda x: x[0]):
             game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
             query_team = next((full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower), query_lower)
             if "last" in query_lower and game_time < now:
                 if query_team.lower() in home.lower() or query_team.lower() in away.lower():
-                    return f"Hey! The last {home} vs {away} game on {date} ended {score if score else '—score’s still coming in!'}. What’d you think of that one?"
-            elif "next" in query_lower and game_time >= now:  # Include today’s games
+                    template = random.choice(last_variations)
+                    return template.format(home=home, away=away, date=date, score=score if score else "—score’s still coming in!")
+            elif "next" in query_lower and game_time >= now:
                 if query_team.lower() in home.lower() or query_team.lower() in away.lower():
-                    return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
+                    template = random.choice(next_variations)
+                    return template.format(home=home, away=away, date=date)
         return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
     except Exception as e:
         logging.error(f"Chat response error: {str(e)}")
@@ -123,12 +145,12 @@ def get_popular_odds():
         c = conn.cursor()
         c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 5",
                   (datetime.now(timezone.utc).strftime('%Y-%m-%d'),))
-        bets = [f"{row[1]} vs {row[2]} on {row[0]}: {row[3]}" for row in c.fetchall()]
+        bets = [f"{row[1]} vs {row[2]} on {row[0]} | {row[3]} | click here to go" for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
         conn.close()
-        bets_str = "<br><br>".join(bets) if bets else "No odds yet—check back soon!"
+        bets_str = "\n".join(bets) if bets else "No odds yet—check back soon!"
         return bets_str, odds_time
     except Exception as e:
         logging.error(f"Get popular odds error: {str(e)}")
@@ -142,20 +164,18 @@ def index():
         update_odds()
         bets, odds_time = get_popular_odds()
         popular_bets_title = f"Popular NBA Bets ({odds_time})"
-        popular_bets = bets  # Only the bets, no extra "Data updated"
+        popular_bets = bets
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
-            bets, odds_time = get_popular_odds()
-            return jsonify({'response': response, 'betting': bets})
+            return jsonify({'response': response, 'query': query})
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
         return render_template('index.html', popular_bets="Error loading data", popular_bets_title="Popular NBA Bets (Error)")
 
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-#new 11:17 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# newdesign 12:00 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
