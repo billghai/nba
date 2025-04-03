@@ -41,6 +41,7 @@ def init_db():
     conn.close()
 
 def update_odds():
+    init_db()  # Ensure tables exist
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         logging.debug("Fetching odds from The Odds API...")
@@ -49,7 +50,7 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        for game in odds_data[:15]:  # Store top 15 for flexibility
+        for game in odds_data[:15]:
             date = game["commence_time"][:10]
             home = game["home_team"]
             away = game["away_team"]
@@ -77,28 +78,19 @@ def get_chat_response(query):
     query_lower = query.lower().replace("bset", "best")
     logging.debug(f"Parsed query: {query_lower}")
 
-    # Generic intent detection
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     
     if "next" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        if "lakers" in query_lower:
-            return f"The next game for the {team} is tonight, April 3, 2025, against the Golden State Warriors at 7:00 PM PDT. What’s your prediction?"
-        elif "suns" in query_lower:
-            return f"The {team} are up next against the Milwaukee Bucks today, April 3, 2025, at 4:30 PM PDT. Any thoughts on that one?"
-        else:
-            return f"The {team} have a game coming up soon—I’d need to check the exact schedule, but it’s likely within the next day or two. What do you think they’ll bring to the court?"
+        return f"The {team} have a game coming up soon—I’d need to check the exact schedule, but it’s likely within the next day or two. What do you think they’ll bring to the court?"
     elif "last" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        if "jazz" in query_lower:
-            return f"The {team} last played on April 2, 2025, losing to the Cleveland Cavaliers 129-113. How do you think they’ll bounce back?"
-        else:
-            return f"The last game for the {team} was likely in the past couple of days—I don’t have the exact score handy, but they’re always worth a chat. What’s your take on their recent play?"
+        return f"The last game for the {team} was likely in the past couple of days—I don’t have the exact score handy, but they’re always worth a chat. What’s your take on their recent play?"
     elif "how" in query_lower and "playing" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
         return f"The {team} have been putting up a fight this season—solid stats across the board, though I’d need a specific player to dive deeper. Who’s your favorite on their roster?"
     elif "best scorer" in query_lower or "highest scorer" in query_lower:
-        return "This season, a guy like Shai Gilgeous-Alexander’s been topping the charts with around 32.8 points per game as of April 2025—pretty clutch! Who do you think’s the best scorer out there?"
+        return "This season’s top scorer is tearing it up with over 30 points per game—I’d need the latest stats to name them, but they’re clutch! Who do you think’s leading the pack?"
     elif "best shooter" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
         return f"For the {team}, they’ve got some sharp shooters—I’d need more data to pick the best, but they’re hitting threes like champs. Who do you think stands out?"
