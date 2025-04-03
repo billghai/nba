@@ -24,7 +24,7 @@ def update_main_roster():
     now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
     today = now.strftime('%Y%m%d')
     yesterday = (now - timedelta(days=1)).strftime('%Y%m%d')
-    tomorrow = (now + timedelta(days=1)).strftime('%Y%m%d')
+    tomorrow = (now + timedelta(days=3)).strftime('%Y%m%d')
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={yesterday}-{tomorrow}"
     try:
         logging.debug("Updating main roster from ESPN...")
@@ -34,7 +34,7 @@ def update_main_roster():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         for event in data.get('events', []):
-            date = event['date'][:10]  # YYYY-MM-DD
+            date = event['date'][:10]
             home = event['competitions'][0]['competitors'][0]['team']['displayName']
             away = event['competitions'][0]['competitors'][1]['team']['displayName']
             c.execute("INSERT OR REPLACE INTO roster (date, home, away, odds, status, score) VALUES (?, ?, ?, ?, ?, ?)",
@@ -69,6 +69,8 @@ def update_odds():
             if odds:
                 c.execute("UPDATE roster SET odds = ? WHERE date = ? AND home = ? AND away = ?",
                           (odds, date, home, away))
+                if c.rowcount == 0:
+                    logging.warning(f"No odds match for {date}: {home} vs {away}")
         conn.commit()
         conn.close()
         logging.debug("Odds updated")
@@ -79,7 +81,8 @@ def update_scores():
     now = datetime.now(timezone.utc) - timedelta(hours=7)
     today = now.strftime('%Y%m%d')
     yesterday = (now - timedelta(days=1)).strftime('%Y%m%d')
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={yesterday}-{today}"
+    tomorrow = (now + timedelta(days=3)).strftime('%Y%m%d')
+    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={yesterday}-{tomorrow}"
     try:
         logging.debug("Updating scores from ESPN...")
         response = requests.get(url, timeout=5)
@@ -91,10 +94,13 @@ def update_scores():
             date = event['date'][:10]
             home = event['competitions'][0]['competitors'][0]['team']['displayName']
             away = event['competitions'][0]['competitors'][1]['team']['displayName']
-            status = event['status']['type']['state']  # pre, in, post
+            status = event['status']['type']['state']
             score = f"{event['competitions'][0]['competitors'][0]['score']} - {event['competitions'][0]['competitors'][1]['score']}" if status == "post" else ""
+            logging.debug(f"Updating {date}: {home} vs {away} - Status: {status}, Score: {score}")
             c.execute("UPDATE roster SET status = ?, score = ? WHERE date = ? AND home = ? AND away = ?",
                       ("over" if status == "post" else "in-play" if status == "in" else "pending", score, date, home, away))
+            if c.rowcount == 0:
+                logging.warning(f"No match for {date}: {home} vs {away}")
         conn.commit()
         conn.close()
         logging.debug("Scores updated")
@@ -132,22 +138,17 @@ def get_game_info(query):
                 if "celtics" in query_lower and ("celtics" in home_lower or "celtics" in away_lower):
                     team = "Boston Celtics"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if date >= today:  # Today or future
+                    if game_time >= last_24h:
                         return f"The next {team} game is on {date} against {opponent}—check back for more details!"
                 elif "lakers" in query_lower and ("lakers" in home_lower or "lakers" in away_lower):
                     team = "Los Angeles Lakers"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if date >= today:
+                    if game_time >= last_24h:
                         return f"The next {team} game is on {date} against {opponent}—check back for more details!"
-                elif "suns" in query_lower and ("suns" in home_lower or "suns" in away_lower):
-                    team = "Phoenix Suns"
+                elif "jazz" in query_lower and ("jazz" in home_lower or "jazz" in away_lower):
+                    team = "Utah Jazz"
                     opponent = game['away'] if team == game['home'] else game['home']
-                    if date >= today:
-                        return f"The next {team} game is on {date} against {opponent}—check back for more details!"
-                elif "knicks" in query_lower and ("knicks" in home_lower or "knicks" in away_lower):
-                    team = "New York Knicks"
-                    opponent = game['away'] if team == game['home'] else game['home']
-                    if date >= today:
+                    if game_time >= last_24h:
                         return f"The next {team} game is on {date} against {opponent}—check back for more details!"
         return "No next game found in schedule—bets suggest a matchup soon, stay tuned!"
     elif "last" in query_lower:
@@ -170,15 +171,8 @@ def get_game_info(query):
                         return f"The last {team} game was on {date} against {opponent}—score: {game.get('score', 'not available yet')}"
                     elif game_time < last_24h:
                         return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
-                elif "suns" in query_lower and ("suns" in home_lower or "suns" in away_lower):
-                    team = "Phoenix Suns"
-                    opponent = game['away'] if team == game['home'] else game['home']
-                    if game_time < now and game_time >= last_24h:
-                        return f"The last {team} game was on {date} against {opponent}—score: {game.get('score', 'not available yet')}"
-                    elif game_time < last_24h:
-                        return f"Grok says: The last {team} game was on {date} against {opponent}—score not available yet, wild right?"
-                elif "knicks" in query_lower and ("knicks" in home_lower or "knicks" in away_lower):
-                    team = "New York Knicks"
+                elif "jazz" in query_lower and ("jazz" in home_lower or "jazz" in away_lower):
+                    team = "Utah Jazz"
                     opponent = game['away'] if team == game['home'] else game['home']
                     if game_time < now and game_time >= last_24h:
                         return f"The last {team} game was on {date} against {opponent}—score: {game.get('score', 'not available yet')}"
@@ -205,6 +199,8 @@ def index():
     try:
         init_db()
         update_main_roster()
+        update_odds()
+        update_scores()
         popular_bets = get_betting_odds()
         if request.method == 'POST':
             query = request.form.get('query', '')
