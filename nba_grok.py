@@ -11,10 +11,50 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
-    "lakers": "Los Angeles Lakers",
+    "hawks": "Atlanta Hawks",
     "celtics": "Boston Celtics",
+    "nets": "Brooklyn Nets",
+    "hornets": "Charlotte Hornets",
+    "bulls": "Chicago Bulls",
+    "cavs": "Cleveland Cavaliers",
+    "cavaliers": "Cleveland Cavaliers",
+    "mavs": "Dallas Mavericks",
+    "mavericks": "Dallas Mavericks",
+    "nuggets": "Denver Nuggets",
+    "pistons": "Detroit Pistons",
+    "warriors": "Golden State Warriors",
+    "dubs": "Golden State Warriors",
+    "rockets": "Houston Rockets",
+    "pacers": "Indiana Pacers",
+    "clippers": "Los Angeles Clippers",
+    "lakers": "Los Angeles Lakers",
+    "grizzlies": "Memphis Grizzlies",
+    "grizz": "Memphis Grizzlies",
+    "heat": "Miami Heat",
+    "bucks": "Milwaukee Bucks",
+    "timberwolves": "Minnesota Timberwolves",
+    "wolves": "Minnesota Timberwolves",
+    "pelicans": "New Orleans Pelicans",
+    "pels": "New Orleans Pelicans",
     "knicks": "New York Knicks",
+    "ny": "New York Knicks",
+    "thunder": "Oklahoma City Thunder",
+    "okc": "Oklahoma City Thunder",
+    "magic": "Orlando Magic",
+    "76ers": "Philadelphia 76ers",
+    "sixers": "Philadelphia 76ers",
+    "philly": "Philadelphia 76ers",
+    "suns": "Phoenix Suns",
+    "trail blazers": "Portland Trail Blazers",
+    "blazers": "Portland Trail Blazers",
+    "kings": "Sacramento Kings",
+    "sactown": "Sacramento Kings",
+    "spurs": "San Antonio Spurs",
+    "raptors": "Toronto Raptors",
+    "raps": "Toronto Raptors",
     "jazz": "Utah Jazz",
+    "wizards": "Washington Wizards",
+    "wiz": "Washington Wizards",
 }
 
 def init_db():
@@ -98,9 +138,11 @@ def get_chat_response(query):
     
     if "last" not in query_lower and "next" not in query_lower:
         if "lebron" in query_lower or "james" in query_lower:
-            return "LeBron’s been killing it this season—averaging around 25 points, 8 rebounds, and 7 assists lately. What do you think of his play?"
+            return "LeBron’s been killing it—averaging around 25 points, 8 rebounds, and 7 assists lately. He’s the NBA’s all-time leading scorer with over 41,000 points as of early 2025. What do you think of his legacy?"
+        elif "highest" in query_lower and ("scorer" in query_lower or "goal" in query_lower):
+            return "LeBron James is the NBA’s all-time leading scorer with over 41,000 points as of January 2025, passing Kareem Abdul-Jabbar in 2023. Want to talk about his stats or someone else?"
         elif "standings" in query_lower:
-            return "I can’t pull exact standings right now, but as of early April 2025, the top teams are jostling for playoff spots. Want me to dig into a specific team?"
+            return "I can’t pull exact standings right now, but as of early April 2025, the top teams are fighting for playoff spots. Want me to dig into a specific team?"
         return "I’m not seeing a last or next game query here. Ask me anything about the NBA—I’ve got plenty to chat about!"
 
     try:
@@ -177,5 +219,6 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
+  
 
-# newdesign 12:00 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# newdesign team aliases 12:10 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
