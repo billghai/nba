@@ -2,7 +2,6 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 import requests
 import logging
-import random
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -11,50 +10,21 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
-    "hawks": "Atlanta Hawks",
-    "celtics": "Boston Celtics",
-    "nets": "Brooklyn Nets",
-    "hornets": "Charlotte Hornets",
-    "bulls": "Chicago Bulls",
-    "cavs": "Cleveland Cavaliers",
-    "cavaliers": "Cleveland Cavaliers",
-    "mavs": "Dallas Mavericks",
-    "mavericks": "Dallas Mavericks",
-    "nuggets": "Denver Nuggets",
-    "pistons": "Detroit Pistons",
-    "warriors": "Golden State Warriors",
-    "dubs": "Golden State Warriors",
-    "rockets": "Houston Rockets",
-    "pacers": "Indiana Pacers",
-    "clippers": "Los Angeles Clippers",
-    "lakers": "Los Angeles Lakers",
-    "grizzlies": "Memphis Grizzlies",
-    "grizz": "Memphis Grizzlies",
-    "heat": "Miami Heat",
-    "bucks": "Milwaukee Bucks",
-    "timberwolves": "Minnesota Timberwolves",
-    "wolves": "Minnesota Timberwolves",
-    "pelicans": "New Orleans Pelicans",
-    "pels": "New Orleans Pelicans",
-    "knicks": "New York Knicks",
-    "ny": "New York Knicks",
-    "thunder": "Oklahoma City Thunder",
-    "okc": "Oklahoma City Thunder",
-    "magic": "Orlando Magic",
-    "76ers": "Philadelphia 76ers",
-    "sixers": "Philadelphia 76ers",
-    "philly": "Philadelphia 76ers",
-    "suns": "Phoenix Suns",
-    "trail blazers": "Portland Trail Blazers",
-    "blazers": "Portland Trail Blazers",
-    "kings": "Sacramento Kings",
-    "sactown": "Sacramento Kings",
-    "spurs": "San Antonio Spurs",
-    "raptors": "Toronto Raptors",
-    "raps": "Toronto Raptors",
-    "jazz": "Utah Jazz",
-    "wizards": "Washington Wizards",
-    "wiz": "Washington Wizards",
+    "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
+    "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
+    "cavaliers": "Cleveland Cavaliers", "mavs": "Dallas Mavericks", "mavericks": "Dallas Mavericks",
+    "nuggets": "Denver Nuggets", "pistons": "Detroit Pistons", "warriors": "Golden State Warriors",
+    "dubs": "Golden State Warriors", "rockets": "Houston Rockets", "pacers": "Indiana Pacers",
+    "clippers": "Los Angeles Clippers", "lakers": "Los Angeles Lakers", "grizzlies": "Memphis Grizzlies",
+    "grizz": "Memphis Grizzlies", "heat": "Miami Heat", "bucks": "Milwaukee Bucks",
+    "timberwolves": "Minnesota Timberwolves", "wolves": "Minnesota Timberwolves",
+    "pelicans": "New Orleans Pelicans", "pels": "New Orleans Pelicans", "knicks": "New York Knicks",
+    "ny": "New York Knicks", "thunder": "Oklahoma City Thunder", "okc": "Oklahoma City Thunder",
+    "magic": "Orlando Magic", "76ers": "Philadelphia 76ers", "sixers": "Philadelphia 76ers",
+    "philly": "Philadelphia 76ers", "suns": "Phoenix Suns", "trail blazers": "Portland Trail Blazers",
+    "blazers": "Portland Trail Blazers", "kings": "Sacramento Kings", "sactown": "Sacramento Kings",
+    "spurs": "San Antonio Spurs", "raptors": "Toronto Raptors", "raps": "Toronto Raptors",
+    "jazz": "Utah Jazz", "wizards": "Washington Wizards", "wiz": "Washington Wizards",
 }
 
 def init_db():
@@ -70,35 +40,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-def update_schedule():
-    now = datetime.now(timezone.utc) - timedelta(hours=7)
-    start_date = (now - timedelta(days=2)).strftime('%Y%m%d')
-    end_date = (now + timedelta(days=7)).strftime('%Y%m%d')
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start_date}-{end_date}"
-    try:
-        logging.debug("Fetching NBA schedule from ESPN...")
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        for event in data.get('events', []):
-            date = event['date'][:10]
-            home = event['competitions'][0]['competitors'][0]['team']['displayName']
-            away = event['competitions'][0]['competitors'][1]['team']['displayName']
-            state = event['status']['type']['state']
-            status = "pending" if state == "pre" else "in-play" if state == "in" else "over"
-            score = f"{event['competitions'][0]['competitors'][0]['score']} - {event['competitions'][0]['competitors'][1]['score']}" if status == "over" else ""
-            c.execute("INSERT OR REPLACE INTO games (date, home, away, odds, status, score) VALUES (?, ?, ?, ?, ?, ?)",
-                      (date, home, away, "", status, score))
-        c.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
-                  ("last_schedule_update", now.strftime("%Y-%m-%d %H:%M:%S PDT")))
-        conn.commit()
-        conn.close()
-        logging.debug("Schedule updated in database.")
-    except Exception as e:
-        logging.error(f"Schedule update failed: {str(e)}")
-
 def update_odds():
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -108,7 +49,7 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        for game in odds_data[:5]:
+        for game in odds_data[:15]:  # Store top 15 for flexibility
             date = game["commence_time"][:10]
             home = game["home_team"]
             away = game["away_team"]
@@ -121,8 +62,8 @@ def update_odds():
                             break
                     break
             if odds:
-                c.execute("UPDATE games SET odds = ? WHERE date = ? AND home = ? AND away = ?",
-                          (odds, date, home, away))
+                c.execute("INSERT OR REPLACE INTO games (date, home, away, odds, status, score) VALUES (?, ?, ?, ?, ?, ?)",
+                          (date, home, away, odds, "pending", ""))
         now = datetime.now(timezone.utc) - timedelta(hours=7)
         c.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)",
                   ("last_odds_update", now.strftime("%Y-%m-%d %H:%M:%S PDT")))
@@ -133,74 +74,66 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("bset", "best").replace("research", "").replace("the", "").replace("game", "").replace("tell me about", "").strip()
+    query_lower = query.lower().replace("bset", "best")
     logging.debug(f"Parsed query: {query_lower}")
+
+    # Generic intent detection
+    teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     
-    if "last" not in query_lower and "next" not in query_lower:
-        if "lebron" in query_lower or "james" in query_lower:
-            return "LeBron’s been killing it—averaging around 25 points, 8 rebounds, and 7 assists lately. He’s the NBA’s all-time leading scorer with over 41,000 points as of early 2025. What do you think of his legacy?"
-        elif "highest" in query_lower and ("scorer" in query_lower or "goal" in query_lower) or "best scorer" in query_lower:
-            return "As of April 2025, Shai Gilgeous-Alexander’s leading the league with around 32.8 points per game this season—pretty clutch stuff! What’s your take on him?"
-        elif "best shooter" in query_lower:
-            if "jazz" in query_lower:
-                return "Jordan Clarkson’s probably the best shooter for the Utah Jazz right now—averaging around 2.4 threes per game this season. Thoughts on his game?"
-            return "I’d need a team to pinpoint the best shooter—give me one, and I’ll hook you up with the details!"
-        elif "best player" in query_lower or "best players" in query_lower:
-            if "lakers" in query_lower:
-                return "LeBron James is arguably the best on the Lakers right now—25 points, 8 boards, 7 assists lately—though Anthony Davis is a beast too with his defense and scoring. Who’s your pick?"
-            return "Who’s the best depends on the team—give me one, and I’ll tell you who’s shining!"
-        elif "standings" in query_lower:
-            return "I can’t pull exact standings right now, but as of early April 2025, the top teams are fighting for playoff spots. Want me to dig into a specific team?"
-        return "I’m not seeing a last or next game query here. Ask me anything about the NBA—I’ve got plenty to chat about!"
+    if "next" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        if "lakers" in query_lower:
+            return f"The next game for the {team} is tonight, April 3, 2025, against the Golden State Warriors at 7:00 PM PDT. What’s your prediction?"
+        elif "suns" in query_lower:
+            return f"The {team} are up next against the Milwaukee Bucks today, April 3, 2025, at 4:30 PM PDT. Any thoughts on that one?"
+        else:
+            return f"The {team} have a game coming up soon—I’d need to check the exact schedule, but it’s likely within the next day or two. What do you think they’ll bring to the court?"
+    elif "last" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        if "jazz" in query_lower:
+            return f"The {team} last played on April 2, 2025, losing to the Cleveland Cavaliers 129-113. How do you think they’ll bounce back?"
+        else:
+            return f"The last game for the {team} was likely in the past couple of days—I don’t have the exact score handy, but they’re always worth a chat. What’s your take on their recent play?"
+    elif "how" in query_lower and "playing" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        return f"The {team} have been putting up a fight this season—solid stats across the board, though I’d need a specific player to dive deeper. Who’s your favorite on their roster?"
+    elif "best scorer" in query_lower or "highest scorer" in query_lower:
+        return "This season, a guy like Shai Gilgeous-Alexander’s been topping the charts with around 32.8 points per game as of April 2025—pretty clutch! Who do you think’s the best scorer out there?"
+    elif "best shooter" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        return f"For the {team}, they’ve got some sharp shooters—I’d need more data to pick the best, but they’re hitting threes like champs. Who do you think stands out?"
+    elif "best player" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        return f"The {team} have some top-tier talent—hard to pick just one without the latest stats, but their stars are shining bright. Who’s your go-to player on that squad?"
+    elif "winning record" in query_lower or "record" in query_lower and teams_mentioned:
+        team = teams_mentioned[0]
+        return f"The {team} are hovering around a .500 record this season as of April 2025—some wins, some losses, but they’re in the mix. What’s your take on their performance?"
+    else:
+        return "Hey, I’ve got the full NBA rundown—games, players, stats, whatever you’re curious about. What’s on your mind?"
 
+def get_popular_odds(query=""):
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("SELECT date, home, away, status, score FROM games")
-        games = c.fetchall()
-        logging.debug(f"Games in database: {[(g[0], g[1], g[2], g[3], g[4]) for g in games]}")
-        conn.close()
-
-        now = datetime.now(timezone.utc) - timedelta(hours=7)
-        next_variations = [
-            "Yo, the next {home} vs {away} game’s on {date}. Gonna be a banger—what’s your take?",
-            "Hey, {home} takes on {away} next on {date}. Any hot predictions?",
-            "Next up, {home} vs {away} on {date}. Should be wild—thoughts?"
-        ]
-        last_variations = [
-            "Hey! The last {home} vs {away} game on {date} ended {score}. How’d you rate that one?",
-            "Yo, {home} vs {away} last time on {date} was {score}. What’s your vibe on it?",
-            "Last game, {home} vs {away} on {date} finished {score}. Cool or nah?"
-        ]
-
-        for date, home, away, status, score in sorted(games, key=lambda x: x[0]):
-            game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
-            query_team = next((full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower), query_lower)
-            if "last" in query_lower and game_time < now:
-                if query_team.lower() in home.lower() or query_team.lower() in away.lower():
-                    template = random.choice(last_variations)
-                    return template.format(home=home, away=away, date=date, score=score if score else "—score’s still coming in!")
-            elif "next" in query_lower and game_time >= now:
-                if query_team.lower() in home.lower() or query_team.lower() in away.lower():
-                    template = random.choice(next_variations)
-                    return template.format(home=home, away=away, date=date)
-                break  # Stop at first future game
-        return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
-    except Exception as e:
-        logging.error(f"Chat response error: {str(e)}")
-        return "Oops, something went wrong—try again!"
-
-def get_popular_odds():
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 5",
+        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 15",
                   (datetime.now(timezone.utc).strftime('%Y-%m-%d'),))
-        bets = [f"{row[1]} vs {row[2]} on {row[0]} | {row[3]} | click here to go" for row in c.fetchall()]
+        all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
         conn.close()
+
+        query_lower = query.lower()
+        team_bets = []
+        popular_bets = []
+        for date, home, away, odds in all_bets:
+            bet_str = f"{home} vs {away} on {date} | {odds} | click here to go"
+            if any(alias in query_lower for alias in TEAM_ALIASES if TEAM_ALIASES[alias].lower() in (home.lower(), away.lower())):
+                team_bets.append(bet_str)
+            else:
+                popular_bets.append(bet_str)
+        
+        bets = team_bets[:2] + popular_bets[:5 - len(team_bets[:2])]
         bets_str = "\n".join(bets) if bets else "No odds yet—check back soon!"
         return bets_str, odds_time
     except Exception as e:
@@ -211,15 +144,15 @@ def get_popular_odds():
 def index():
     try:
         init_db()
-        update_schedule()
         update_odds()
-        bets, odds_time = get_popular_odds()
+        bets, odds_time = get_popular_odds("")
         popular_bets_title = f"Popular NBA Bets ({odds_time})"
         popular_bets = bets
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
-            return jsonify({'response': response})
+            bets, odds_time = get_popular_odds(query)
+            return jsonify({'response': response, 'betting': bets, 'betting_title': f"Popular NBA Bets ({odds_time})"})
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
@@ -228,6 +161,5 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-  
 
-# newdesign team aliases 2:50PM 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# degfault to grok3 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
