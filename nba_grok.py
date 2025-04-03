@@ -2,7 +2,6 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 import requests
 import logging
-import json
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -45,28 +44,11 @@ def update_schedule():
                       (date, home, away, "", status, score))
         conn.commit()
         conn.close()
-        logging.debug("Schedule updated.")
+        logging.debug("Schedule updated in database.")
     except Exception as e:
         logging.error(f"Schedule update failed: {str(e)}")
 
-# Fetch and cache NBA schedule as JSON
-def update_schedule_cache():
-    now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT adjustment
-    start_date = (now - timedelta(days=2)).strftime('%Y%m%d')
-    end_date = (now + timedelta(days=7)).strftime('%Y%m%d')
-    url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start_date}-{end_date}"
-    try:
-        logging.debug("Caching NBA schedule...")
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        with open("schedule_cache.json", "w") as f:
-            json.dump(data, f)
-        logging.debug("Schedule cached to schedule_cache.json.")
-    except Exception as e:
-        logging.error(f"Cache update failed: {str(e)}")
-
-# Fetch and update odds from The Odds API
+# Fetch and update odds from The Odds API into database
 def update_odds():
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -93,12 +75,12 @@ def update_odds():
                           (odds, date, home, away))
         conn.commit()
         conn.close()
-        logging.debug("Odds updated.")
+        logging.debug("Odds updated in database.")
     except Exception as e:
         logging.error(f"Odds update failed: {str(e)}")
 
 # Simple chat response logic
-def get_chatevolutionresponse(query):
+def get_chat_response(query):
     query_lower = query.lower()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -117,7 +99,7 @@ def get_chatevolutionresponse(query):
                 return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
     return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
 
-# Get popular betting odds
+# Get popular betting odds from database
 def get_popular_odds():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -145,4 +127,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-#new grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+#new 9:34AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
