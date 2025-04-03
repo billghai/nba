@@ -102,7 +102,6 @@ def get_chat_response(query):
         logging.debug(f"Games in database: {[(g[0], g[1], g[2], g[3], g[4]) for g in games]}")
         conn.close()
 
-        debug_dump = "Database dump:\n" + "\n".join([f"{g[0]}: {g[1]} vs {g[2]} ({g[3]}, {g[4]})" for g in games])
         now = datetime.now(timezone.utc) - timedelta(hours=7)
         for date, home, away, status, score in sorted(games, key=lambda x: x[0]):
             game_time = datetime.strptime(f"{date}T00:00:00-07:00", '%Y-%m-%dT%H:%M:%S%z')
@@ -110,10 +109,10 @@ def get_chat_response(query):
             if "last" in query_lower and game_time < now:
                 if query_team.lower() in home.lower() or query_team.lower() in away.lower():
                     return f"Hey! The last {home} vs {away} game on {date} ended {score if score else '—score’s still coming in!'}. What’d you think of that one?"
-            elif "next" in query_lower and (game_time > now or (game_time.date() == now.date() and status == "pending")):
+            elif "next" in query_lower and game_time >= now:  # Include today’s games
                 if query_team.lower() in home.lower() or query_team.lower() in away.lower():
                     return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
-        return f"Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?\n\n{debug_dump}"
+        return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
     except Exception as e:
         logging.error(f"Chat response error: {str(e)}")
         return "Oops, something went wrong—try again!"
@@ -128,15 +127,12 @@ def get_popular_odds():
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
-        c.execute("SELECT value FROM metadata WHERE key = 'last_schedule_update'")
-        schedule_time_row = c.fetchone()
-        schedule_time = schedule_time_row[0] if schedule_time_row else "Unknown"
         conn.close()
         bets_str = "<br><br>".join(bets) if bets else "No odds yet—check back soon!"
-        return bets_str, odds_time, schedule_time
+        return bets_str, odds_time
     except Exception as e:
         logging.error(f"Get popular odds error: {str(e)}")
-        return "No odds available—try again later!", "Unknown", "Unknown"
+        return "No odds available—try again later!", "Unknown"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -144,21 +140,22 @@ def index():
         init_db()
         update_schedule()
         update_odds()
-        bets, odds_time, schedule_time = get_popular_odds()
+        bets, odds_time = get_popular_odds()
         popular_bets_title = f"Popular NBA Bets ({odds_time})"
-        popular_bets = f"{bets}<br><br>Data updated - Schedule: {schedule_time}, Odds: {odds_time}"
+        popular_bets = bets  # Only the bets, no extra "Data updated"
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
-            bets, odds_time, schedule_time = get_popular_odds()
-            return jsonify({'response': response, 'betting': f"{bets}<br><br>Data updated - Schedule: {schedule_time}, Odds: {odds_time}"})
+            bets, odds_time = get_popular_odds()
+            return jsonify({'response': response, 'betting': bets})
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
         return render_template('index.html', popular_bets="Error loading data", popular_bets_title="Popular NBA Bets (Error)")
 
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-#new 10:35 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+#new 11:17 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
