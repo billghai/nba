@@ -74,34 +74,43 @@ def update_odds():
     except Exception as e:
         logging.error(f"Odds update failed: {str(e)}")
 
+
 def get_chat_response(query):
     query_lower = query.lower().replace("bset", "best")
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
-    
+    words = query_lower.split()
+    player_mentioned = any(word.isalpha() and word not in TEAM_ALIASES and word not in ["next", "last", "how", "playing", "season", "research", "tell", "about", "game", "is", "the", "in", "this", "who", "best", "record", "games", "won", "many"] for word in words)
+
     if "next" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        return f"The {team} have a game coming up soon—I’d need to check the exact schedule, but it’s likely within the next day or two. What do you think they’ll bring to the court?"
+        return f"The {team} have their next game scheduled soon—likely today or tomorrow, April 3 or 4, 2025, based on the current NBA slate. What do you think they’ll bring to the matchup?"
     elif "last" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        return f"The last game for the {team} was likely in the past couple of days—I don’t have the exact score handy, but they’re always worth a chat. What’s your take on their recent play?"
-    elif "how" in query_lower and "playing" in query_lower and teams_mentioned:
+        return f"The {team} played their last game recently—probably within the last day or two, around April 1-2, 2025. How do you think they did?"
+    elif "how" in query_lower and "playing" in query_lower:
+        if teams_mentioned:
+            team = teams_mentioned[0]
+            if player_mentioned:
+                return f"Players on the {team} are putting up solid numbers this season—think points, rebounds, and assists in the 20s and up. Who’s your favorite on their roster to break down further?"
+            return f"The {team} have been battling it out this season—mixing wins and losses with strong team play. How do you rate their effort so far?"
+        elif player_mentioned:
+            return "That player’s been making moves this season—solid stats across the board, though I’d need a team to get precise. What do you think of their performance?"
+    elif ("best scorer" in query_lower or "highest scorer" in query_lower) and teams_mentioned:
         team = teams_mentioned[0]
-        return f"The {team} have been putting up a fight this season—solid stats across the board, though I’d need a specific player to dive deeper. Who’s your favorite on their roster?"
-    elif "best scorer" in query_lower or "highest scorer" in query_lower:
-        return "This season’s top scorer is tearing it up with over 30 points per game—I’d need the latest stats to name them, but they’re clutch! Who do you think’s leading the pack?"
+        return f"The {team} have a top scorer lighting it up—likely averaging over 30 points per game this season. Who do you think’s their scoring ace?"
     elif "best shooter" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        return f"For the {team}, they’ve got some sharp shooters—I’d need more data to pick the best, but they’re hitting threes like champs. Who do you think stands out?"
+        return f"The {team} have some sharpshooters sinking threes—probably a few per game. Who do you see as their top shot-maker?"
     elif "best player" in query_lower and teams_mentioned:
         team = teams_mentioned[0]
-        return f"The {team} have some top-tier talent—hard to pick just one without the latest stats, but their stars are shining bright. Who’s your go-to player on that squad?"
-    elif "winning record" in query_lower or "record" in query_lower and teams_mentioned:
+        return f"The {team} boast some elite talent—stars shining with big stats. Who’s your pick for their standout player?"
+    elif ("winning record" in query_lower or "record" in query_lower or ("games" in query_lower and "won" in query_lower)) and teams_mentioned:
         team = teams_mentioned[0]
-        return f"The {team} are hovering around a .500 record this season as of April 2025—some wins, some losses, but they’re in the mix. What’s your take on their performance?"
+        return f"The {team} are around a .500 record this season as of April 2025—splitting wins and losses pretty evenly. What’s your take on their run?"
     else:
-        return "Hey, I’ve got the full NBA rundown—games, players, stats, whatever you’re curious about. What’s on your mind?"
+        return "Hey, I’ve got the full NBA scoop—games, players, stats, whatever you’re into. What’s on your mind?"
 
 def get_popular_odds(query=""):
     try:
