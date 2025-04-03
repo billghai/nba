@@ -145,6 +145,10 @@ def get_chat_response(query):
             if "jazz" in query_lower:
                 return "Jordan Clarkson’s probably the best shooter for the Utah Jazz right now—averaging around 2.4 threes per game this season. Thoughts on his game?"
             return "I’d need a team to pinpoint the best shooter—give me one, and I’ll hook you up with the details!"
+        elif "best player" in query_lower or "best players" in query_lower:
+            if "lakers" in query_lower:
+                return "LeBron James is arguably the best on the Lakers right now—25 points, 8 boards, 7 assists lately—though Anthony Davis is a beast too with his defense and scoring. Who’s your pick?"
+            return "Who’s the best depends on the team—give me one, and I’ll tell you who’s shining!"
         elif "standings" in query_lower:
             return "I can’t pull exact standings right now, but as of early April 2025, the top teams are fighting for playoff spots. Want me to dig into a specific team?"
         return "I’m not seeing a last or next game query here. Ask me anything about the NBA—I’ve got plenty to chat about!"
@@ -215,7 +219,7 @@ def index():
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
-            return jsonify({'response': response, 'query': query})
+            return jsonify({'response': response})
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
@@ -226,4 +230,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
   
 
-# newdesign team aliases 2:00PM 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# newdesign team aliases 2:50PM 0403 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44

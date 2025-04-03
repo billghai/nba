@@ -36,7 +36,6 @@
                 <div class="bet-row">No upcoming NBA odds available right now.</div>
             {% endif %}
         </div>
-        <div id="queryFeedback"></div>
     </div>
     <div class="footer">
         Disclaimer: Odds are for entertainment only—not a financial adviser!
@@ -52,17 +51,12 @@
             if (!query) return;
 
             const chatWindow = document.getElementById('chatWindow');
-            const queryFeedback = document.getElementById('queryFeedback');
 
             const userMsg = document.createElement('div');
             userMsg.className = 'message user-message';
             userMsg.textContent = query;
             chatWindow.insertBefore(userMsg, document.getElementById('chatForm'));
             scrollChat();
-
-            const feedbackMsg = document.createElement('div');
-            feedbackMsg.textContent = `You asked: ${query}`;
-            queryFeedback.appendChild(feedbackMsg);
 
             try {
                 const res = await fetch('/', {
@@ -88,12 +82,6 @@
 
             document.querySelector('input[name="query"]').value = '';
         });
-
-        function placeBet(bet) {
-            const affiliateLink = `https://bet365.com/affiliate?ref=your_affiliate_id&bet=${encodeURIComponent(bet)}`;
-            alert(`Redirecting to place bet: ${bet}\n(Mock action - replace with real affiliate link)`);
-            window.location.href = affiliateLink;
-        }
     </script>
 </body>
 </html>
