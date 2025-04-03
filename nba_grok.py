@@ -9,7 +9,6 @@ ODDS_API_KEY = "547a8403fcaa9d12eaeb986848600e4d"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
-# Initialize database
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -20,9 +19,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Fetch and update game schedule from ESPN into database
 def update_schedule():
-    now = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT adjustment
+    now = datetime.now(timezone.utc) - timedelta(hours=7)
     start_date = (now - timedelta(days=2)).strftime('%Y%m%d')
     end_date = (now + timedelta(days=7)).strftime('%Y%m%d')
     url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={start_date}-{end_date}"
@@ -48,7 +46,6 @@ def update_schedule():
     except Exception as e:
         logging.error(f"Schedule update failed: {str(e)}")
 
-# Fetch and update odds from The Odds API into database
 def update_odds():
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
@@ -58,13 +55,13 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        for game in odds_data[:5]:  # Limit to top 5 for "popular" bets
+        for game in odds_data[:5]:
             date = game["commence_time"][:10]
             home = game["home_team"]
             away = game["away_team"]
             odds = ""
             for bookmaker in game["bookmakers"]:
-                if bookmaker["key"] == "draftkings":  # Prefer DraftKings
+                if bookmaker["key"] == "draftkings":
                     for market in bookmaker["markets"]:
                         if market["key"] == "h2h":
                             odds = f"{home} @ {market['outcomes'][0]['price']} vs {away} @ {market['outcomes'][1]['price']}"
@@ -79,9 +76,8 @@ def update_odds():
     except Exception as e:
         logging.error(f"Odds update failed: {str(e)}")
 
-# Simple chat response logic
 def get_chat_response(query):
-    query_lower = query.lower()
+    query_lower = query.lower().replace("research", "").replace("the", "").replace("game", "").strip()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT date, home, away, status, score FROM games")
@@ -99,7 +95,6 @@ def get_chat_response(query):
                 return f"Yo, the next {home} vs {away} game is on {date}. Should be a good one—any predictions?"
     return "Hmm, not sure what game you’re asking about. Wanna talk Lakers, Celtics, or something else?"
 
-# Get popular betting odds from database
 def get_popular_odds():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -109,7 +104,6 @@ def get_popular_odds():
     conn.close()
     return "<br><br>".join(bets) if bets else "No odds yet—check back soon!"
 
-# Flask route
 @app.route('/', methods=['GET', 'POST'])
 def index():
     init_db()
@@ -127,4 +121,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-#new 9:34AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+#new 10:24 AM grokchat 04/03 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
