@@ -43,7 +43,7 @@ def init_db():
 
 def update_odds():
     init_db()
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 1}  # Shorten to 1 day for today focus
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -82,25 +82,27 @@ def get_chat_response(query):
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     team = teams_mentioned[0] if teams_mentioned else None
 
-    if "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
+    if "highest" in query_lower and "scorer" in query_lower:
+        return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast—your take on who could catch him?"
+    elif "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
         return "LeBron’s tearing it up for the Lakers this season—averaging around 25 points, 8 rebounds, and 7 assists per game, still a force of nature on the court at Crypto.com Arena in LA. Absolute machine driving the team forward—thoughts on his impact?"
-    elif "highest" in query_lower and "scorer" in query_lower:
-        return "Shai Gilgeous-Alexander’s the NBA’s top scorer this year—32.8 points per game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast—your take on who could catch him?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
         return "LeBron’s highest score this season hit around 42 points—insane for a vet, torching defenses at Crypto.com Arena in LA. Bet he’s got more in the tank—what’s your call on his ceiling?"
     elif "how" in query_lower and "playing" in query_lower and team:
         return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
     elif "next" in query_lower and team:
         if "lakers" in query_lower:
-            return "Lakers face the Warriors tonight, 7 PM PDT, April 3, 2025, at Crypto.com Arena in LA. It’s a high-stakes clash—LeBron and Curry going head-to-head. Pick your winner now."
+            return "Lakers face the Warriors tonight, 7 PM PDT, April 3, 2025, at Crypto.com Arena in LA. It’s a high-stakes clash—LeBron and Curry going head-to-head in a packed house. Pick your winner now."
         elif "suns" in query_lower:
             return "Suns take on the Bucks today, 4:30 PM PDT, April 3, 2025, at Footprint Center in Phoenix. Tight matchup with playoff vibes—should be electric. Who’s your bet?"
         elif "celtics" in query_lower:
-            return "Celtics hit the Suns tomorrow, April 4, 2025, at TD Garden in Boston. They’re locked to dominate—could be a Finals preview. What’s your prediction?"
+            return "Celtics hit the Suns tomorrow, April 4, 2025, at TD Garden in Boston. They’re locked to dominate—could be a Finals preview with Tatum and crew firing on all cylinders. What’s your prediction?"
         elif "heat" in query_lower:
             return "Heat play the Grizzlies tonight, April 3, 2025, at Kaseya Center in Miami. Should be a banger with both teams scrapping—your call on this one?"
         elif "jazz" in query_lower:
             return "Jazz face the Pacers tomorrow, April 4, 2025, at Delta Center in Salt Lake City. They’re set to roll—could swing momentum their way. What’s your vibe?"
+        elif "knicks" in query_lower:
+            return "Knicks take on the Wizards this Saturday, April 5, 2025, at Madison Square Garden in NYC. They’re geared up to steamroll—could be a statement game. Who’s your pick?"
         else:
             return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride. Who’s your pick to shine?"
     elif "last" in query_lower and "knicks" in query_lower:
@@ -167,4 +169,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# default to grok3 7.39PM https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# default to grok3 8:46PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
