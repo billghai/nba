@@ -5,7 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Replace with your latest key
+ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
@@ -82,33 +82,39 @@ def get_chat_response(query):
     team = teams_mentioned[0] if teams_mentioned else None
 
     if "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
-        return "LeBron’s crushing it—around 25 points, 8 rebounds, 7 assists per game this season. Guy’s a machine. What’s your take?"
+        return "LeBron’s killing it—25 points, 8 rebounds, 7 assists a game this season. Absolute beast. What’s your take?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
-        return "LeBron’s peak this season hit around 42 points—insane, right? Bet he’s got more in the tank."
+        return "LeBron’s topped out around 42 points this season—nuts, right? Bet he’s got more coming."
     elif "how" in query_lower and "playing" in query_lower and team:
-        return f"The {team} are in the fight—solid team stats, wins piling up. They’re pushing the pace. Thoughts?"
+        return f"The {team} are grinding—solid stats, pushing for wins. They’re in the game. Thoughts?"
     elif "next" in query_lower and team:
         if "lakers" in query_lower:
-            return "Lakers vs. Warriors tonight, 7 PM PDT, April 3, 2025. It’s go time—what’s your call?"
+            return "Lakers hit the Warriors tonight, 7 PM PDT, April 3, 2025. It’s on—what’s your call?"
         elif "suns" in query_lower:
-            return "Suns take on the Bucks today, 4:30 PM PDT, April 3, 2025. Tight matchup—your prediction?"
+            return "Suns face the Bucks today, 4:30 PM PDT, April 3, 2025. Tight one—your pick?"
+        elif "celtics" in query_lower:
+            return "Celtics take on the Suns tomorrow, April 4, 2025. They’re set to crush it—what’s your vibe?"
+        elif "heat" in query_lower:
+            return "Heat play the Grizzlies tonight, April 3, 2025. Should be a banger—your guess?"
+        elif "jazz" in query_lower:
+            return "Jazz go up against the Pacers tomorrow, April 4, 2025. Ready to roll—what’s your prediction?"
         else:
-            return f"The {team} have a game lined up soon—probably today or tomorrow. They’re ready to dominate. What’s your guess?"
+            return f"The {team} have a game soon—within a day or two. They’re primed to dominate. What’s your bet?"
     elif "last" in query_lower and team:
-        return f"The {team} just played—likely yesterday or the day before, April 1 or 2, 2025. Solid effort. How’d you see it?"
+        return f"The {team} played a couple days back—around April 1-2, 2025. Solid outing. How’d you rate it?"
     elif "games" in query_lower and "today" in query_lower:
-        return "Today’s lineup, April 3, 2025: Lakers vs. Warriors at 7 PM PDT, Suns vs. Bucks at 4:30 PM PDT, and more. Big night—pick your winner."
+        return "Today’s slate, April 3, 2025: Lakers vs. Warriors at 7 PM PDT, Suns vs. Bucks at 4:30 PM PDT, Heat vs. Grizzlies, and more. Pick your winner."
     elif "won" in query_lower and "games" in query_lower and team:
-        return f"The {team} are hovering around a .500 record—say 30-35 wins by now, April 2025. Decent hustle. What’s your read?"
+        return f"The {team} are around .500—maybe 30-35 wins by now, April 2025. Holding their own. Your read?"
     else:
-        return "I’ve got the NBA locked down—hit me with your question, and let’s solve it fast."
+        return "I’ve got the NBA locked—hit me with your question, and we’ll nail it fast."
 
 def get_popular_odds(query=""):
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 15", (today,))
+        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today,))
         all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
