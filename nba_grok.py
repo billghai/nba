@@ -9,6 +9,7 @@ ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
+
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
     "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
@@ -81,39 +82,39 @@ def get_chat_response(query):
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     team = teams_mentioned[0] if teams_mentioned else None
 
-    if "highest" in query_lower and "scorer" in query_lower:
-        return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025. Absolute killer. Who’s your bet to catch him?"
-    elif "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
-        return "LeBron’s killing it—25 points, 8 rebounds, 7 assists a game this season. Absolute beast. What’s your take?"
+    if "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
+        return "LeBron’s tearing it up for the Lakers this season—averaging around 25 points, 8 rebounds, and 7 assists per game, still a force of nature on the court at Crypto.com Arena in LA. Absolute machine driving the team forward—thoughts on his impact?"
+    elif "highest" in query_lower and "scorer" in query_lower:
+        return "Shai Gilgeous-Alexander’s the NBA’s top scorer this year—32.8 points per game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast—your take on who could catch him?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
-        return "LeBron’s topped out around 42 points this season—nuts, right? Bet he’s got more coming."
+        return "LeBron’s highest score this season hit around 42 points—insane for a vet, torching defenses at Crypto.com Arena in LA. Bet he’s got more in the tank—what’s your call on his ceiling?"
     elif "how" in query_lower and "playing" in query_lower and team:
-        return f"The {team} are grinding—solid stats, pushing for wins. They’re in the game. Thoughts?"
+        return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
     elif "next" in query_lower and team:
         if "lakers" in query_lower:
-            return "Lakers hit the Warriors tonight, 7 PM PDT, April 3, 2025. It’s on—what’s your call?"
+            return "Lakers face the Warriors tonight, 7 PM PDT, April 3, 2025, at Crypto.com Arena in LA. It’s a high-stakes clash—LeBron and Curry going head-to-head. Pick your winner now."
         elif "suns" in query_lower:
-            return "Suns face the Bucks today, 4:30 PM PDT, April 3, 2025. Tight one—your pick?"
+            return "Suns take on the Bucks today, 4:30 PM PDT, April 3, 2025, at Footprint Center in Phoenix. Tight matchup with playoff vibes—should be electric. Who’s your bet?"
         elif "celtics" in query_lower:
-            return "Celtics take on the Suns tomorrow, April 4, 2025. They’re set to crush it—what’s your vibe?"
+            return "Celtics hit the Suns tomorrow, April 4, 2025, at TD Garden in Boston. They’re locked to dominate—could be a Finals preview. What’s your prediction?"
         elif "heat" in query_lower:
-            return "Heat play the Grizzlies tonight, April 3, 2025. Should be a banger—your guess?"
+            return "Heat play the Grizzlies tonight, April 3, 2025, at Kaseya Center in Miami. Should be a banger with both teams scrapping—your call on this one?"
         elif "jazz" in query_lower:
-            return "Jazz go up against the Pacers tomorrow, April 4, 2025. Ready to roll—what’s your prediction?"
+            return "Jazz face the Pacers tomorrow, April 4, 2025, at Delta Center in Salt Lake City. They’re set to roll—could swing momentum their way. What’s your vibe?"
         else:
-            return f"The {team} have a game soon—within a day or two. They’re primed to dominate. What’s your bet?"
+            return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride. Who’s your pick to shine?"
     elif "last" in query_lower and "knicks" in query_lower:
-        return "Knicks dropped 105-91 to the 76ers on April 1, 2025. Tough break—what’s your take?"
+        return "Knicks dropped 105-91 to the 76ers on April 1, 2025, at Madison Square Garden in NYC. Tough loss—could’ve swung it with a tighter D. What’s your take?"
     elif "last" in query_lower and "jazz" in query_lower:
-        return "Jazz lost 129-113 to the Cavs on April 2, 2025. Rough night—what’s your call?"
+        return "Jazz got smoked 129-113 by the Cavs on April 2, 2025, at Delta Center in Salt Lake City. Rough night—defense went AWOL. How’d you see it?"
     elif "last" in query_lower and team:
-        return f"The {team} played a couple days back—around April 1-2, 2025. Solid outing. How’d you rate it?"
+        return f"The {team} played their last game a couple days back—around April 1-2, 2025, at their home court. Solid effort, win or lose—kept it competitive. Your thoughts on their play?"
     elif "games" in query_lower and "today" in query_lower:
-        return "Today’s slate, April 3, 2025: Lakers vs. Warriors at 7 PM PDT, Suns vs. Bucks at 4:30 PM PDT, Heat vs. Grizzlies, and more. Pick your winner."
+        return "Today’s NBA slate, April 3, 2025: Lakers vs. Warriors at 7 PM PDT in Crypto.com Arena, LA; Suns vs. Bucks at 4:30 PM PDT in Footprint Center, Phoenix; Heat vs. Grizzlies in Kaseya Center, Miami; and more action across the league. Pick your winner—it’s gonna be epic."
     elif "won" in query_lower and "games" in query_lower and team:
-        return f"The {team} are around .500—maybe 30-35 wins by now, April 2025. Holding their own. Your read?"
+        return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs. What’s your read?"
     else:
-        return "I’ve got the NBA locked—hit me with your question, and we’ll nail it fast."
+        return "I’ve got the NBA wired—games, players, stats, all of it. Fire your question, and we’ll crack it wide open."
 
 def get_popular_odds(query=""):
     try:
