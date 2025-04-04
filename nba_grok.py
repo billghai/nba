@@ -5,7 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "547a8403fcaa9d12eaeb986848600e4d"
+ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
