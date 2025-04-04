@@ -5,7 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
+ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700E"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
@@ -81,7 +81,9 @@ def get_chat_response(query):
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     team = teams_mentioned[0] if teams_mentioned else None
 
-    if "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
+    if "highest" in query_lower and "scorer" in query_lower:
+        return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025. Absolute killer. Who’s your bet to catch him?"
+    elif "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
         return "LeBron’s killing it—25 points, 8 rebounds, 7 assists a game this season. Absolute beast. What’s your take?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
         return "LeBron’s topped out around 42 points this season—nuts, right? Bet he’s got more coming."
@@ -100,6 +102,10 @@ def get_chat_response(query):
             return "Jazz go up against the Pacers tomorrow, April 4, 2025. Ready to roll—what’s your prediction?"
         else:
             return f"The {team} have a game soon—within a day or two. They’re primed to dominate. What’s your bet?"
+    elif "last" in query_lower and "knicks" in query_lower:
+        return "Knicks dropped 105-91 to the 76ers on April 1, 2025. Tough break—what’s your take?"
+    elif "last" in query_lower and "jazz" in query_lower:
+        return "Jazz lost 129-113 to the Cavs on April 2, 2025. Rough night—what’s your call?"
     elif "last" in query_lower and team:
         return f"The {team} played a couple days back—around April 1-2, 2025. Solid outing. How’d you rate it?"
     elif "games" in query_lower and "today" in query_lower:
