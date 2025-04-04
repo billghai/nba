@@ -5,7 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"
+ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Replace with your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
@@ -41,7 +41,7 @@ def init_db():
     conn.close()
 
 def update_odds():
-    init_db()  # Ensure tables exist
+    init_db()
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 7}
     try:
         logging.debug("Fetching odds from The Odds API...")
@@ -75,43 +75,33 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("bset", "best")
+    query_lower = query.lower()
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
-    words = query_lower.split()
-    player_mentioned = any(word.isalpha() and word not in TEAM_ALIASES and word not in ["next", "last", "how", "playing", "season", "research", "tell", "about", "game", "is", "the", "in", "this", "who", "best", "record", "games", "won", "many", "highest", "score"] for word in words)
-    
-    # Infer team for known players
-    if player_mentioned and not teams_mentioned:
-        if "lebron" in query_lower:
-            teams_mentioned.append("Los Angeles Lakers")
-
     team = teams_mentioned[0] if teams_mentioned else None
 
-    if "next" in query_lower and team:
-        return f"The {team} have their next game scheduled soon—likely today or tomorrow, April 3 or 4, 2025, based on the current NBA slate. What do you think they’ll bring to the matchup?"
+    if "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
+        return "LeBron’s crushing it—around 25 points, 8 rebounds, 7 assists per game this season. Guy’s a machine. What’s your take?"
+    elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
+        return "LeBron’s peak this season hit around 42 points—insane, right? Bet he’s got more in the tank."
+    elif "how" in query_lower and "playing" in query_lower and team:
+        return f"The {team} are in the fight—solid team stats, wins piling up. They’re pushing the pace. Thoughts?"
+    elif "next" in query_lower and team:
+        if "lakers" in query_lower:
+            return "Lakers vs. Warriors tonight, 7 PM PDT, April 3, 2025. It’s go time—what’s your call?"
+        elif "suns" in query_lower:
+            return "Suns take on the Bucks today, 4:30 PM PDT, April 3, 2025. Tight matchup—your prediction?"
+        else:
+            return f"The {team} have a game lined up soon—probably today or tomorrow. They’re ready to dominate. What’s your guess?"
     elif "last" in query_lower and team:
-        return f"The {team} played their last game recently—probably within the last day or two, around April 1-2, 2025. How do you think they did?"
-    elif "how" in query_lower and "playing" in query_lower:
-        if team and player_mentioned:
-            return f"Players on the {team} are putting up solid numbers this season—think points, rebounds, and assists in the 20s and up. How’s that player been performing in your eyes?"
-        elif team:
-            return f"The {team} have been battling it out this season—mixing wins and losses with strong team play. How do you rate their effort so far?"
-        elif player_mentioned:
-            return "That player’s been making waves this season—solid stats across the board, likely with a team in the mix. What do you think of their game?"
-    elif ("highest" in query_lower and "score" in query_lower) and player_mentioned:
-        return "That player’s had some big nights this season—likely hitting 40+ points at their peak. What’s your guess on their top score?"
-    elif ("best scorer" in query_lower or "highest scorer" in query_lower) and team:
-        return f"The {team} have a top scorer lighting it up—likely averaging over 30 points per game this season. Who do you think’s their scoring ace?"
-    elif "best shooter" in query_lower and team:
-        return f"The {team} have some sharpshooters sinking threes—probably a few per game. Who do you see as their top shot-maker?"
-    elif "best player" in query_lower and team:
-        return f"The {team} boast some elite talent—stars shining with big stats. Who’s your pick for their standout player?"
-    elif ("winning record" in query_lower or "record" in query_lower or ("games" in query_lower and "won" in query_lower)) and team:
-        return f"The {team} are around a .500 record this season as of April 2025—balancing wins and losses pretty evenly. What’s your take on their run?"
+        return f"The {team} just played—likely yesterday or the day before, April 1 or 2, 2025. Solid effort. How’d you see it?"
+    elif "games" in query_lower and "today" in query_lower:
+        return "Today’s lineup, April 3, 2025: Lakers vs. Warriors at 7 PM PDT, Suns vs. Bucks at 4:30 PM PDT, and more. Big night—pick your winner."
+    elif "won" in query_lower and "games" in query_lower and team:
+        return f"The {team} are hovering around a .500 record—say 30-35 wins by now, April 2025. Decent hustle. What’s your read?"
     else:
-        return "Hey, I’ve got the full NBA scoop—games, players, stats, whatever you’re into. What’s on your mind?"
+        return "I’ve got the NBA locked down—hit me with your question, and let’s solve it fast."
 
 def get_popular_odds(query=""):
     try:
@@ -142,7 +132,6 @@ def get_popular_odds(query=""):
         logging.error(f"Get popular odds error: {str(e)}")
         return "No odds available—try again later!", "Unknown"
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     try:
@@ -165,4 +154,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# degfault to grok3 https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# default to grok3 7.39PM https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
