@@ -9,6 +9,16 @@ ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
+import sqlite3
+from datetime import datetime, timedelta, timezone
+import requests
+import logging
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+ODDS_API_KEY = "YOUR_NEW_API_KEY_HERE"  # Replace with your latest key
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -77,7 +87,7 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower()
+    query_lower = query.lower().replace("bext", "best")  # Handle typos
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
@@ -85,14 +95,21 @@ def get_chat_response(query):
     today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
     yesterday = today - timedelta(days=1)
 
-    if "highest" in query_lower and "scorer" in query_lower:
-        return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast—your take on who could catch him?"
+    if "highest" in query_lower and "scorer" in query_lower and "nba" in query_lower:
+        return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast tearing through defenses—your take on who could catch him?"
     elif "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
         return "LeBron’s tearing it up for the Lakers this season—averaging around 25 points, 8 rebounds, and 7 assists per game, still a force of nature on the court at Crypto.com Arena in LA. Absolute machine driving the team forward—thoughts on his impact?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
         return "LeBron’s highest score this season hit around 42 points—insane for a vet, torching defenses at Crypto.com Arena in LA. Bet he’s got more in the tank—what’s your call on his ceiling?"
     elif "how" in query_lower and "playing" in query_lower and team:
         return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
+    elif "best" in query_lower and "scorer" in query_lower and team:
+        return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter—your guess on who’s leading the charge?"
+    elif "next" in query_lower and "where" in query_lower and team:
+        if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+            return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
+        else:
+            return f"The {team}’s next game is soon—within a day or two, likely at their home arena. They’re set to dominate—should be a wild one. Where do you think they’ll take it?"
     elif "next" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
             return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
@@ -115,13 +132,13 @@ def get_chat_response(query):
     elif "last" in query_lower and "jazz" in query_lower:
         return "Jazz got smoked 129-113 by the Cavs on April 2, 2025, at Delta Center in Salt Lake City. Rough night—defense went AWOL. How’d you see it?"
     elif "last" in query_lower and team:
-        return f"The {team} played their last game a couple days back—around {yesterday.strftime('%B %-d, %Y')}, at their home court. Solid effort, win or lose—kept it competitive with key plays. Your thoughts on their play?"
+        return f"The {team} played their last game recently—around {yesterday.strftime('%B %-d, %Y')}, at their home court. Solid effort, win or lose—kept it competitive with key plays going down. Your thoughts on their play?"
     elif "games" in query_lower and "today" in query_lower:
         return "Today’s NBA slate, April 4, 2025: Lakers vs. Pelicans at 7:30 PM PDT in Crypto.com Arena, LA; Celtics vs. Suns at TD Garden, Boston; Jazz vs. Pacers at Delta Center, Salt Lake City; and more action league-wide. Pick your winner—it’s gonna be epic."
     elif "won" in query_lower and "games" in query_lower and team:
-        return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs. What’s your read?"
+        return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs with some clutch plays. What’s your read?"
     else:
-        return "I’ve got the NBA wired—games, players, stats, all of it. Fire your question, and we’ll crack it wide open."
+        return "I’ve got the NBA wired—games, players, stats, all of it. Fire your question, and we’ll crack it wide open fast—bring it on!"
 
 def get_popular_odds(query=""):
     try:
@@ -176,4 +193,5 @@ if __name__ == '__main__':
 
 
 
-# default fix at promp tlevel 0404 10:15AM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+
+# default fix at promp tlevel 0404 16:45PM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
