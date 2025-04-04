@@ -43,7 +43,8 @@ def init_db():
 
 def update_odds():
     init_db()
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "daysFrom": 1}  # Shorten to 1 day for today focus
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -81,6 +82,8 @@ def get_chat_response(query):
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
     team = teams_mentioned[0] if teams_mentioned else None
+    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
+    yesterday = today - timedelta(days=1)
 
     if "highest" in query_lower and "scorer" in query_lower:
         return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast—your take on who could catch him?"
@@ -91,28 +94,30 @@ def get_chat_response(query):
     elif "how" in query_lower and "playing" in query_lower and team:
         return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
     elif "next" in query_lower and team:
-        if "lakers" in query_lower:
-            return "Lakers face the Warriors tonight, 7 PM PDT, April 3, 2025, at Crypto.com Arena in LA. It’s a high-stakes clash—LeBron and Curry going head-to-head in a packed house. Pick your winner now."
-        elif "suns" in query_lower:
-            return "Suns take on the Bucks today, 4:30 PM PDT, April 3, 2025, at Footprint Center in Phoenix. Tight matchup with playoff vibes—should be electric. Who’s your bet?"
-        elif "celtics" in query_lower:
-            return "Celtics hit the Suns tomorrow, April 4, 2025, at TD Garden in Boston. They’re locked to dominate—could be a Finals preview with Tatum and crew firing on all cylinders. What’s your prediction?"
+        if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+            return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
+        elif "suns" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+            return "Suns face the Celtics tonight, April 4, 2025, at Footprint Center in Phoenix. Tight matchup with playoff vibes—could go down to the wire with Durant firing. Who’s your bet?"
+        elif "celtics" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+            return "Celtics hit the Suns tonight, April 4, 2025, at TD Garden in Boston. They’re locked to dominate—could be a Finals preview with Tatum and crew firing on all cylinders. What’s your prediction?"
         elif "heat" in query_lower:
-            return "Heat play the Grizzlies tonight, April 3, 2025, at Kaseya Center in Miami. Should be a banger with both teams scrapping—your call on this one?"
-        elif "jazz" in query_lower:
-            return "Jazz face the Pacers tomorrow, April 4, 2025, at Delta Center in Salt Lake City. They’re set to roll—could swing momentum their way. What’s your vibe?"
+            return "Heat play the Nets tomorrow, April 5, 2025, at Kaseya Center in Miami. Should be a banger with both teams scrapping—your call on this one?"
+        elif "jazz" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+            return "Jazz face the Pacers tonight, April 4, 2025, at Delta Center in Salt Lake City. They’re set to roll—could swing momentum their way after a tough stretch. What’s your vibe?"
         elif "knicks" in query_lower:
-            return "Knicks take on the Wizards this Saturday, April 5, 2025, at Madison Square Garden in NYC. They’re geared up to steamroll—could be a statement game. Who’s your pick?"
+            return "Knicks take on the Wizards tomorrow, April 5, 2025, at Madison Square Garden in NYC. They’re geared up to steamroll—could be a statement game with Brunson driving. Who’s your pick?"
         else:
-            return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride. Who’s your pick to shine?"
+            return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride with stars stepping up. Who’s your pick to shine?"
+    elif "last" in query_lower and "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
+        return "Lakers lost 123-116 to the Warriors last night, April 3, 2025, at Crypto.com Arena in LA. Tough one—Curry dropped 37, and they couldn’t close it out despite LeBron’s push. What’s your take?"
     elif "last" in query_lower and "knicks" in query_lower:
         return "Knicks dropped 105-91 to the 76ers on April 1, 2025, at Madison Square Garden in NYC. Tough loss—could’ve swung it with a tighter D. What’s your take?"
     elif "last" in query_lower and "jazz" in query_lower:
         return "Jazz got smoked 129-113 by the Cavs on April 2, 2025, at Delta Center in Salt Lake City. Rough night—defense went AWOL. How’d you see it?"
     elif "last" in query_lower and team:
-        return f"The {team} played their last game a couple days back—around April 1-2, 2025, at their home court. Solid effort, win or lose—kept it competitive. Your thoughts on their play?"
+        return f"The {team} played their last game a couple days back—around {yesterday.strftime('%B %-d, %Y')}, at their home court. Solid effort, win or lose—kept it competitive with key plays. Your thoughts on their play?"
     elif "games" in query_lower and "today" in query_lower:
-        return "Today’s NBA slate, April 3, 2025: Lakers vs. Warriors at 7 PM PDT in Crypto.com Arena, LA; Suns vs. Bucks at 4:30 PM PDT in Footprint Center, Phoenix; Heat vs. Grizzlies in Kaseya Center, Miami; and more action across the league. Pick your winner—it’s gonna be epic."
+        return "Today’s NBA slate, April 4, 2025: Lakers vs. Pelicans at 7:30 PM PDT in Crypto.com Arena, LA; Celtics vs. Suns at TD Garden, Boston; Jazz vs. Pacers at Delta Center, Salt Lake City; and more action league-wide. Pick your winner—it’s gonna be epic."
     elif "won" in query_lower and "games" in query_lower and team:
         return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs. What’s your read?"
     else:
@@ -169,4 +174,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# default to grok3 8:46PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+
+
+# default fix at promp tlevel 0404 10:15AM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
