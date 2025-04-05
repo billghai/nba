@@ -9,6 +9,16 @@ ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
+import sqlite3
+from datetime import datetime, timedelta, timezone
+import requests
+import logging
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+ODDS_API_KEY = "YOUR_NEW_API_KEY_HERE"  # Replace with your latest key
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -44,7 +54,7 @@ def init_db():
 def update_odds():
     init_db()
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today, "dateTo": today}  # Today only
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today, "dateTo": today}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -52,7 +62,7 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("DELETE FROM games WHERE date < ?", (today,))  # Clear old games
+        c.execute("DELETE FROM games WHERE date != ?", (today,))  # Keep only today’s games
         for game in odds_data[:15]:
             date = game["commence_time"][:10]
             home = game["home_team"]
@@ -78,7 +88,7 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("bext", "best")  # Handle typos
+    query_lower = query.lower().replace("bext", "best").replace("heats", "heat")  # Handle typos
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
@@ -88,19 +98,25 @@ def get_chat_response(query):
 
     if "highest" in query_lower and "scorer" in query_lower and "nba" in query_lower:
         return "Shai Gilgeous-Alexander’s the top dog this season—32.8 points a game as of late March 2025, lighting up arenas like the Paycom Center in OKC. Guy’s a scoring beast tearing through defenses—your take on who could catch him?"
+    elif "best" in query_lower and "player" in query_lower and "nba" in query_lower:
+        return "Nikola Jokić’s the best in the game this season—around 26 points a game, running the show at Ball Arena in Denver. Guy’s a triple-double machine and MVP lock—your call on who’s close?"
     elif "how" in query_lower and "playing" in query_lower and "lebron" in query_lower:
         return "LeBron’s tearing it up for the Lakers this season—averaging around 25 points, 8 rebounds, and 7 assists per game, still a force of nature on the court at Crypto.com Arena in LA. Absolute machine driving the team forward—thoughts on his impact?"
     elif "highest" in query_lower and "score" in query_lower and "lebron" in query_lower:
         return "LeBron’s highest score this season hit around 42 points—insane for a vet, torching defenses at Crypto.com Arena in LA. Bet he’s got more in the tank—what’s your call on his ceiling?"
     elif "how" in query_lower and "playing" in query_lower and team:
         return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
-    elif "best" in query_lower and "scorer" in query_lower and team:
+    elif ("top" in query_lower or "best" in query_lower or "highest" in query_lower) and "scorer" in query_lower and team:
         if "lakers" in query_lower:
-            return "LeBron’s the top scorer for the Lakers—around 25 points a game this season, dominating at Crypto.com Arena in LA. Guy’s a clutch beast—your thoughts on his reign?"
+            return "LeBron’s the top scorer for the Lakers—around 25 points a game this season, dominating at Crypto.com Arena in LA. Guy’s a clutch beast tearing it up—your thoughts on his reign?"
         elif "jazz" in query_lower:
             return "Jordan Clarkson’s the top scorer for the Jazz—around 18-20 points a game this season, lighting it up at Delta Center in Salt Lake City. He’s their go-to bucket-getter—your take on his game?"
+        elif "clippers" in query_lower:
+            return "Norman Powell’s the top scorer for the Clippers—around 22 points a game this season, torching it at Intuit Dome in LA. He’s their scoring ace—your guess on his edge?"
+        elif "heat" in query_lower:
+            return "Tyler Herro’s the top scorer for the Heat—around 22-25 points a game this season, firing at Kaseya Center in Miami. He’s their clutch shooter—your call on his impact?"
         else:
-            return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter tearing it up—your guess on who’s leading the charge?"
+            return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter tearing through—your guess on who’s leading the charge?"
     elif "next" in query_lower and "where" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
             return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
@@ -143,10 +159,6 @@ def get_popular_odds(query=""):
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today,))
         all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
-        if not all_bets:  # Fallback to next day if today’s empty
-            tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime('%Y-%m-%d')
-            c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (tomorrow,))
-            all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
@@ -190,6 +202,7 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
+
 
 
 
