@@ -10,6 +10,7 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 
+
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
     "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
@@ -52,7 +53,7 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("DELETE FROM games WHERE date != ?", (today,))  # Keep only today’s games
+        c.execute("DELETE FROM games WHERE date != ?", (today,))  # Clear non-today games
         for game in odds_data[:15]:
             date = game["commence_time"][:10]
             home = game["home_team"]
@@ -105,6 +106,10 @@ def get_chat_response(query):
             return "Norman Powell’s the top scorer for the Clippers—around 22 points a game this season, torching it at Intuit Dome in LA. He’s their scoring ace—your guess on his edge?"
         elif "heat" in query_lower:
             return "Tyler Herro’s the top scorer for the Heat—around 22-25 points a game this season, firing at Kaseya Center in Miami. He’s their clutch shooter—your call on his impact?"
+        elif "pelicans" in query_lower:
+            return "Zion Williamson’s the top scorer for the Pelicans—around 23 points a game this season, bulldozing at Smoothie King Center in New Orleans. He’s their power playmaker—your take on his force?"
+        elif "knicks" in query_lower:
+            return "Jalen Brunson’s the top scorer for the Knicks—around 27 points a game this season, running the show at Madison Square Garden in NYC. He’s their scoring engine—your call on his game?"
         else:
             return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter tearing through—your guess on who’s leading the charge?"
     elif "next" in query_lower and "where" in query_lower and team:
@@ -192,9 +197,6 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-
-
-
 
 
 # default fix at promp tlevel 0404 16:45PM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
