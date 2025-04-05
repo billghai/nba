@@ -9,16 +9,7 @@ ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
-import sqlite3
-from datetime import datetime, timedelta, timezone
-import requests
-import logging
-from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
-ODDS_API_KEY = "YOUR_NEW_API_KEY_HERE"  # Replace with your latest key
-ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
-DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
