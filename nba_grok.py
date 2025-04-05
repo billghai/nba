@@ -10,7 +10,6 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 
-
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
     "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
@@ -45,7 +44,7 @@ def init_db():
 def update_odds():
     init_db()
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today}
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today, "dateTo": today}  # Today only
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -53,6 +52,7 @@ def update_odds():
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        c.execute("DELETE FROM games WHERE date < ?", (today,))  # Clear old games
         for game in odds_data[:15]:
             date = game["commence_time"][:10]
             home = game["home_team"]
@@ -95,12 +95,17 @@ def get_chat_response(query):
     elif "how" in query_lower and "playing" in query_lower and team:
         return f"The {team} are grinding hard this season—racking up wins and solid stats at their home turf. They’re pushing the pace and staying in the fight—could be a playoff contender if they keep it up. What’s your read on their game?"
     elif "best" in query_lower and "scorer" in query_lower and team:
-        return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter—your guess on who’s leading the charge?"
+        if "lakers" in query_lower:
+            return "LeBron’s the top scorer for the Lakers—around 25 points a game this season, dominating at Crypto.com Arena in LA. Guy’s a clutch beast—your thoughts on his reign?"
+        elif "jazz" in query_lower:
+            return "Jordan Clarkson’s the top scorer for the Jazz—around 18-20 points a game this season, lighting it up at Delta Center in Salt Lake City. He’s their go-to bucket-getter—your take on his game?"
+        else:
+            return f"The {team}’s top scorer is lighting it up—probably averaging 18-20 points a game this season, dominating at their home court. They’re the go-to bucket-getter tearing it up—your guess on who’s leading the charge?"
     elif "next" in query_lower and "where" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
             return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
         else:
-            return f"The {team}’s next game is soon—within a day or two, likely at their home arena. They’re set to dominate—should be a wild one. Where do you think they’ll take it?"
+            return f"The {team}’s next game is soon—within a day or two, likely at their home arena. They’re set to dominate—should be a wild one with stars firing. Where do you think they’ll take it?"
     elif "next" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-04':
             return "Lakers take on the Pelicans tonight, 7:30 PM PDT, April 4, 2025, at Crypto.com Arena in LA. After last night’s battle, they’re hungry to bounce back—LeBron’s leading the charge in a packed house. Who’s your pick?"
@@ -138,6 +143,10 @@ def get_popular_odds(query=""):
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today,))
         all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
+        if not all_bets:  # Fallback to next day if today’s empty
+            tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime('%Y-%m-%d')
+            c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (tomorrow,))
+            all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
