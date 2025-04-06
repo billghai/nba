@@ -85,29 +85,44 @@ def get_chat_response(query):
     today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT
     yesterday = today - timedelta(days=1)
 
-    # Fetch betting window data for next game lookup
+    # Fetch betting window data
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
     upcoming_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
     conn.close()
 
-    if "do you think" in query_lower and "win" in query_lower and "tonight" in query_lower and team:
+    if "how do you think" in query_lower and "do" in query_lower and "tonight" in query_lower and team:
         for date, home, away, odds in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
                 home_odds, away_odds = odds.split(" vs ")
                 home_team, home_odd = home_odds.split(" @ ")
                 away_team, away_odd = away_odds.split(" @ ")
                 favored = home if float(home_odd) < float(away_odd) else away
-                underdog = away if favored == home else home
-                if "jazz" in query_lower:
-                    return f"Jazz take on the Hawks tonight, April 6—Hawks are favored at {home_odd if favored == 'Atlanta Hawks' else away_odd}, but Clarkson’s got a shot to upset ‘em at Delta Center. I’d lean Hawks—your call?"
-                elif "celtics" in query_lower:
-                    return f"Celtics face the Wizards tonight, April 6—odds scream Celtics at {home_odd}, and Tatum’s crew should crush it at TD Garden. I’d bet Boston—your pick?"
+                venue = "Madison Square Garden in NYC" if "knicks" in query_lower and "knicks" in home.lower() else "Delta Center in Salt Lake City" if "jazz" in query_lower and "jazz" in home.lower() else "Crypto.com Arena in LA" if "lakers" in query_lower and "lakers" in home.lower() else "their home court" if team.lower() in home.lower() else "the road"
+                if "suns" in query_lower:
+                    return f"Tonight, April 6, the Suns hit the Knicks at {venue}—Knicks are favored at {home_odd}, and with Phoenix on a five-game skid without Durant, it’s rough. Booker’s battling at 6.5 odds, but Knicks could bury ‘em—your take?"
                 elif "lakers" in query_lower:
-                    return f"Lakers hit the Thunder tonight, April 6—odds favor Lakers at {home_odd if favored == 'Los Angeles Lakers' else away_odd}, and LeBron’s home edge could seal it at Crypto.com Arena. I’d go Lakers—your take?"
+                    return f"Tonight, April 6, the Lakers face the Thunder at {venue}—Lakers hold at {home_odd}, and LeBron’s 25 PPG could carry ‘em post-Pelicans loss. Thunder’s scrappy at 4.1, but I’d bet Lakers—your vibe?"
+                elif "jazz" in query_lower:
+                    return f"Tonight, April 6, the Jazz take the Hawks at {venue}—Hawks lead at {home_odd if favored == 'Atlanta Hawks' else away_odd}, and Jazz are reeling from five straight Ls. Clarkson’s a 6.5 underdog spark—Hawks might edge it, your call?"
                 else:
-                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—{favored} are favored at {home_odd if favored == home else away_odd}, but {underdog} could surprise. I’d pick {favored}—who you got?"
+                    return f"Tonight, April 6, the {team} play {away if team.lower() in home.lower() else home} at {venue}—{favored} are favored at {home_odd if favored == home else away_odd}. {team} could swing it with their stars—your gut says what?"
+        return f"No game tonight for the {team}—they’re likely licking wounds or gearing up. Without odds, I’d say they’ve got fight—how you feeling about ‘em?"
+    elif "do you think" in query_lower and "win" in query_lower and "tonight" in query_lower and team:
+        for date, home, away, odds in upcoming_games:
+            if team.lower() in home.lower() or team.lower() in away.lower():
+                home_odds, away_odds = odds.split(" vs ")
+                home_team, home_odd = home_odds.split(" @ ")
+                away_team, away_odd = away_odds.split(" @ ")
+                favored = home if float(home_odd) < float(away_odd) else away
+                venue = "Delta Center in Salt Lake City" if "jazz" in query_lower and "jazz" in home.lower() else "Crypto.com Arena in LA" if "lakers" in query_lower and "lakers" in home.lower() else "their home court" if team.lower() in home.lower() else "the road"
+                if "jazz" in query_lower:
+                    return f"Jazz take on the Hawks tonight, April 6—Hawks are favored at {home_odd if favored == 'Atlanta Hawks' else away_odd}, but Clarkson’s got upset potential at {venue}. I’d lean Hawks—your call?"
+                elif "lakers" in query_lower:
+                    return f"Lakers hit the Thunder tonight, April 6—odds favor Lakers at {home_odd if favored == 'Los Angeles Lakers' else away_odd}, and LeBron’s home edge could seal it at {venue}. I’d back Lakers—your take?"
+                else:
+                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—{favored} lead at {home_odd if favored == home else away_odd}, but {team} could surprise at {venue}. I’d pick {favored}—who you got?"
         return f"The {team} don’t play tonight—next game’s soon, tough to call without odds, but their stars could swing it. Who’s your pick?"
     elif "odds" in query_lower and "winning" in query_lower and "tonight" in query_lower and team:
         for date, home, away, odds in upcoming_games:
@@ -115,19 +130,27 @@ def get_chat_response(query):
                 home_odds, away_odds = odds.split(" vs ")
                 home_team, home_odd = home_odds.split(" @ ")
                 away_team, away_odd = away_odds.split(" @ ")
+                venue = "Delta Center in Salt Lake City" if "jazz" in query_lower and "jazz" in home.lower() else "Crypto.com Arena in LA" if "lakers" in query_lower and "lakers" in home.lower() else "their home court" if team.lower() in home.lower() else "the road"
                 if "lakers" in query_lower:
-                    return f"Lakers vs. Thunder tonight, April 6—odds are {home_odd if 'Lakers' in home else away_odd} for the Lakers to win at Crypto.com Arena. Solid shot with LeBron—your bet?"
+                    return f"Lakers vs. Thunder tonight, April 6—odds are {home_odd if 'Lakers' in home else away_odd} for Lakers to win at {venue}. LeBron’s got a solid shot—your bet?"
                 elif "jazz" in query_lower:
-                    return f"Jazz vs. Hawks tonight, April 6—odds are {home_odd if 'Jazz' in home else away_odd} for the Jazz to win at Delta Center. Tough climb, but Clarkson’s a wild card—your take?"
+                    return f"Jazz vs. Hawks tonight, April 6—odds are {home_odd if 'Jazz' in home else away_odd} for Jazz to win at {venue}. Tough climb, but Clarkson’s a wild card—your take?"
                 else:
-                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—odds are {home_odd if team.lower() in home.lower() else away_odd} for {team} to win. What’s your play?"
+                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—odds are {home_odd if team.lower() in home.lower() else away_odd} for {team} to win at {venue}. What’s your play?"
         return f"No game tonight for the {team}—odds aren’t up yet for their next one. Want a guess when they play next?"
     elif "do you think" in query_lower and "beat" in query_lower and len(teams_mentioned) >= 2:
         team1, team2 = teams_mentioned[:2]
+        for date, home, away, odds in upcoming_games:
+            if (team1.lower() in home.lower() and team2.lower() in away.lower()) or (team2.lower() in home.lower() and team1.lower() in away.lower()):
+                home_odds, away_odds = odds.split(" vs ")
+                home_team, home_odd = home_odds.split(" @ ")
+                away_team, away_odd = away_odds.split(" @ ")
+                favored = home if float(home_odd) < float(away_odd) else away
+                return f"{team1} vs. {team2} tonight, April 6—{favored} are favored at {home_odd if favored == home else away_odd}. I’d back {favored}’s star power—your call?"
         if "clippers" in query_lower and "lakers" in query_lower:
-            return f"Clippers vs. Lakers isn’t tonight—next matchup’s soon, and Lakers usually edge it with LeBron’s 25 PPG, but Powell’s 22 PPG could flip it. I’d lean Lakers—your call?"
+            return f"Clippers vs. Lakers isn’t tonight—next clash, Lakers edge it with LeBron’s 25 PPG, but Powell’s 22 PPG could upset at Crypto.com Arena. I’d lean Lakers—your take?"
         else:
-            return f"No {team1} vs. {team2} tonight—when they clash next, it’s a toss-up, but {team1}’s got the edge with their star power. Who you picking?"
+            return f"No {team1} vs. {team2} tonight—when they meet next, it’s a toss-up, but {team1}’s got the edge with their stars. Who you picking?"
     elif "how" in query_lower and "do" in query_lower and "last night" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
             return "Lakers lost to the Pelicans last night, April 5, at Smoothie King Center—tight game, but LeBron’s push fell short. What’s your take?"
@@ -140,9 +163,7 @@ def get_chat_response(query):
     elif ("tell me" in query_lower or "research" in query_lower) and "next" in query_lower and team:
         for date, home, away in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
-                venue = "United Center in Chicago" if "bulls" in query_lower else "Delta Center in Salt Lake City" if "jazz" in query_lower else "TD Garden in Boston" if "celtics" in query_lower else "their home arena"
-                if team.lower() in away.lower():
-                    venue = "the opponent’s arena" if not "bulls" in query_lower else "Spectrum Center in Charlotte"
+                venue = "United Center in Chicago" if "bulls" in query_lower else "Delta Center in Salt Lake City" if "jazz" in query_lower else "TD Garden in Boston" if "celtics" in query_lower else "their home court" if team.lower() in home.lower() else "the opponent’s arena"
                 if "celtics" in query_lower:
                     return f"Celtics hit the Wizards tonight, April 6, 2025, at {venue}. They’re locked to dominate—could be a blowout with Tatum leading. Who’s your pick?"
                 elif "jazz" in query_lower:
@@ -153,9 +174,7 @@ def get_chat_response(query):
                     return f"Lakers take on the Thunder tonight, April 6, 2025, at {venue}. They’re hungry to roll—LeBron’s leading the charge at home. Who’s your pick?"
                 else:
                     return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6, 2025, at {venue}. They’re primed to dominate—should be a wild ride. Who’s your pick?"
-        if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
-            return "Lakers face the Cavaliers tomorrow, April 7, 2025, at Crypto.com Arena in LA. They’re hungry to bounce back—LeBron’s leading the charge. Who’s your pick?"
-        elif "heat" in query_lower:
+        if "heat" in query_lower:
             return "Heat play the Nets tomorrow, April 7, 2025, at Kaseya Center in Miami. They’re set to scrap—could be a banger with Herro firing. Who’s your call?"
         elif "pelicans" in query_lower:
             return "Pelicans take on the Cavaliers tomorrow, April 7, 2025, at Rocket Mortgage FieldHouse in Cleveland. They’re gearing up—Zion’s ready to bulldoze. Who’s your pick?"
@@ -231,5 +250,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
 
 
-
-# default fix at promp tlevel 0406 9.09 AM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# default fix default grok prompt04/06 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
