@@ -5,10 +5,9 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
+ODDS_API_KEY = "YOUR_NEW_API_KEY_HERE"  # Replace with your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
-
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -128,10 +127,15 @@ def get_chat_response(query):
         for date, home, away in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
                 if "next" in query_lower:
+                    venue = "United Center in Chicago" if "bulls" in query_lower else "Delta Center in Salt Lake City" if "jazz" in query_lower else "TD Garden in Boston" if "celtics" in query_lower else "their home arena"
+                    if team.lower() in away.lower():
+                        venue = "the opponent’s arena" if not "bulls" in query_lower else "Spectrum Center in Charlotte"
                     if "jazz" in query_lower:
-                        return "Jazz face the Hawks tonight, April 6, 2025, at Delta Center in Salt Lake City. They’re set to roll—could be a tight one with Clarkson firing. What’s your prediction?"
+                        return f"Jazz face the Hawks tonight, April 6, 2025, at {venue}. They’re set to roll—could be a tight one with Clarkson firing. What’s your prediction?"
                     elif "celtics" in query_lower:
-                        return "Celtics hit the Wizards tonight, April 6, 2025, at TD Garden in Boston. They’re locked to dominate—could be a blowout with Tatum leading. Who’s your pick?"
+                        return f"Celtics hit the Wizards tonight, April 6, 2025, at {venue}. They’re locked to dominate—could be a blowout with Tatum leading. Who’s your pick?"
+                    elif "bulls" in query_lower:
+                        return f"Bulls play the Hornets tonight, April 6, 2025, at {venue}. They’re primed to dominate—could be a wild ride with DeRozan slicing. Who’s your pick?"
                     elif "heat" in query_lower:
                         return "Heat play the Nets tomorrow, April 7, 2025, at Kaseya Center in Miami. They’re set to scrap—could be a banger with Herro firing. Who’s your call?"
                     elif "pelicans" in query_lower:
@@ -141,7 +145,7 @@ def get_chat_response(query):
                     elif "knicks" in query_lower:
                         return "Knicks take on the Cavaliers tomorrow, April 7, 2025, at Madison Square Garden in NYC. They’re set to steamroll—Brunson’s driving hard. Who’s your call?"
                     else:
-                        return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6, 2025, at {'their home court' if team.lower() in home.lower() else 'the opponent’s arena'}. They’re primed to dominate—should be a wild ride. Who’s your pick?"
+                        return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6, 2025, at {venue}. They’re primed to dominate—should be a wild ride. Who’s your pick?"
         # Handle last games with assumed results
         if "last" in query_lower and "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
             return "Lakers lost to the Pelicans yesterday, April 5, 2025, at Smoothie King Center in New Orleans—score was tight, but they couldn’t seal it despite LeBron’s push. What’s your take?"
@@ -214,4 +218,5 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
 
 
-# default fix at promp tlevel 0404 16:45PM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+
+# default fix at promp tlevel 0406 9.09 AM   https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
