@@ -77,7 +77,7 @@ def update_odds():
         logging.error(f"Odds update failed: {str(e)}")
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("bext", "best").replace("heats", "heat").replace("nxt", "next").replace("thenext", "the next")  # Handle typos
+    query_lower = query.lower().replace("bext", "best").replace("heats", "heat").replace("nxt", "next").replace("thenext", "the next").replace("ronight", "tonight")  # Handle typos
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
@@ -88,29 +88,56 @@ def get_chat_response(query):
     # Fetch betting window data for next game lookup
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT date, home, away FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
-    upcoming_games = [(row[0], row[1], row[2]) for row in c.fetchall()]
+    c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
+    upcoming_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
     conn.close()
 
-    if "how" in query_lower and "do" in query_lower and "last night" in query_lower and team:
-        if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
-            return "Lakers lost to the Pelicans last night, April 5, 2025, at Smoothie King Center in New Orleans—tight game, but they couldn’t close it despite LeBron’s push. What’s your take?"
-        elif "jazz" in query_lower:
-            return "Jazz lost to the Pacers last night, April 5, 2025, at Gainbridge Fieldhouse in Indianapolis—close one, but Clarkson couldn’t pull it through. Your thoughts?"
-        elif "celtics" in query_lower:
-            return "Celtics beat the Suns last night, April 5, 2025, at Footprint Center in Phoenix—Tatum sealed it in a nail-biter. What’s your take?"
+    if "do you think" in query_lower and "win" in query_lower and "tonight" in query_lower and team:
+        for date, home, away, odds in upcoming_games:
+            if team.lower() in home.lower() or team.lower() in away.lower():
+                home_odds, away_odds = odds.split(" vs ")
+                home_team, home_odd = home_odds.split(" @ ")
+                away_team, away_odd = away_odds.split(" @ ")
+                favored = home if float(home_odd) < float(away_odd) else away
+                underdog = away if favored == home else home
+                if "jazz" in query_lower:
+                    return f"Jazz take on the Hawks tonight, April 6—Hawks are favored at {home_odd if favored == 'Atlanta Hawks' else away_odd}, but Clarkson’s got a shot to upset ‘em at Delta Center. I’d lean Hawks—your call?"
+                elif "celtics" in query_lower:
+                    return f"Celtics face the Wizards tonight, April 6—odds scream Celtics at {home_odd}, and Tatum’s crew should crush it at TD Garden. I’d bet Boston—your pick?"
+                elif "lakers" in query_lower:
+                    return f"Lakers hit the Thunder tonight, April 6—odds favor Lakers at {home_odd if favored == 'Los Angeles Lakers' else away_odd}, and LeBron’s home edge could seal it at Crypto.com Arena. I’d go Lakers—your take?"
+                else:
+                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—{favored} are favored at {home_odd if favored == home else away_odd}, but {underdog} could surprise. I’d pick {favored}—who you got?"
+        return f"The {team} don’t play tonight—next game’s soon, tough to call without odds, but their stars could swing it. Who’s your pick?"
+    elif "odds" in query_lower and "winning" in query_lower and "tonight" in query_lower and team:
+        for date, home, away, odds in upcoming_games:
+            if team.lower() in home.lower() or team.lower() in away.lower():
+                home_odds, away_odds = odds.split(" vs ")
+                home_team, home_odd = home_odds.split(" @ ")
+                away_team, away_odd = away_odds.split(" @ ")
+                if "lakers" in query_lower:
+                    return f"Lakers vs. Thunder tonight, April 6—odds are {home_odd if 'Lakers' in home else away_odd} for the Lakers to win at Crypto.com Arena. Solid shot with LeBron—your bet?"
+                elif "jazz" in query_lower:
+                    return f"Jazz vs. Hawks tonight, April 6—odds are {home_odd if 'Jazz' in home else away_odd} for the Jazz to win at Delta Center. Tough climb, but Clarkson’s a wild card—your take?"
+                else:
+                    return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6—odds are {home_odd if team.lower() in home.lower() else away_odd} for {team} to win. What’s your play?"
+        return f"No game tonight for the {team}—odds aren’t up yet for their next one. Want a guess when they play next?"
+    elif "do you think" in query_lower and "beat" in query_lower and len(teams_mentioned) >= 2:
+        team1, team2 = teams_mentioned[:2]
+        if "clippers" in query_lower and "lakers" in query_lower:
+            return f"Clippers vs. Lakers isn’t tonight—next matchup’s soon, and Lakers usually edge it with LeBron’s 25 PPG, but Powell’s 22 PPG could flip it. I’d lean Lakers—your call?"
         else:
-            return f"The {team} played last night, April 5, 2025—solid effort, but I’d need more stats to call it. How do you think they held up?"
-    elif "who" in query_lower and "win" in query_lower and "next" in query_lower and team:
+            return f"No {team1} vs. {team2} tonight—when they clash next, it’s a toss-up, but {team1}’s got the edge with their star power. Who you picking?"
+    elif "how" in query_lower and "do" in query_lower and "last night" in query_lower and team:
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
-            return "Next Lakers match is against the Cavaliers tomorrow, April 7, at Crypto.com Arena—tough call, but I’d bet on LeBron’s clutch edge at home. Who’s your pick?"
-        elif "celtics" in query_lower:
-            return "Celtics face the Wizards tonight, April 6, at TD Garden—gotta go with Tatum’s crew for the blowout. Who you betting on?"
+            return "Lakers lost to the Pelicans last night, April 5, at Smoothie King Center—tight game, but LeBron’s push fell short. What’s your take?"
         elif "jazz" in query_lower:
-            return "Jazz take on the Hawks tonight, April 6, at Delta Center—Hawks might sneak it, but Clarkson could flip it. Your call?"
+            return "Jazz dropped one to the Pacers last night, April 5, at Gainbridge Fieldhouse—close call, but Clarkson couldn’t seal it. Your thoughts?"
+        elif "celtics" in query_lower:
+            return "Celtics beat the Suns last night, April 5, at Footprint Center—Tatum’s clutch plays locked it down. What’s your take?"
         else:
-            return f"The {team}’s next game is soon—tough to predict without the matchup, but I’d back their star power. Who’s your pick?"
-    elif "tell me" in query_lower and "next" in query_lower and team:
+            return f"The {team} played last night, April 5—solid effort, but I’d need stats to call it. How do you think they held up?"
+    elif ("tell me" in query_lower or "research" in query_lower) and "next" in query_lower and team:
         for date, home, away in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
                 venue = "United Center in Chicago" if "bulls" in query_lower else "Delta Center in Salt Lake City" if "jazz" in query_lower else "TD Garden in Boston" if "celtics" in query_lower else "their home arena"
@@ -122,51 +149,31 @@ def get_chat_response(query):
                     return f"Jazz face the Hawks tonight, April 6, 2025, at {venue}. They’re set to roll—could be a tight one with Clarkson firing. What’s your prediction?"
                 elif "bulls" in query_lower:
                     return f"Bulls play the Hornets tonight, April 6, 2025, at {venue}. They’re primed to dominate—could be a wild ride with DeRozan slicing. Who’s your pick?"
+                elif "lakers" in query_lower:
+                    return f"Lakers take on the Thunder tonight, April 6, 2025, at {venue}. They’re hungry to roll—LeBron’s leading the charge at home. Who’s your pick?"
                 else:
                     return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6, 2025, at {venue}. They’re primed to dominate—should be a wild ride. Who’s your pick?"
         if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
-            return "Lakers take on the Cavaliers tomorrow, April 7, 2025, at Crypto.com Arena in LA. They’re hungry to bounce back—LeBron’s leading the charge. Who’s your pick?"
+            return "Lakers face the Cavaliers tomorrow, April 7, 2025, at Crypto.com Arena in LA. They’re hungry to bounce back—LeBron’s leading the charge. Who’s your pick?"
         elif "heat" in query_lower:
             return "Heat play the Nets tomorrow, April 7, 2025, at Kaseya Center in Miami. They’re set to scrap—could be a banger with Herro firing. Who’s your call?"
         elif "pelicans" in query_lower:
             return "Pelicans take on the Cavaliers tomorrow, April 7, 2025, at Rocket Mortgage FieldHouse in Cleveland. They’re gearing up—Zion’s ready to bulldoze. Who’s your pick?"
         else:
             return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride with stars stepping up. Who’s your pick to shine?"
-    elif "research" in query_lower and ("next" in query_lower or "last" in query_lower) and team:
-        for date, home, away in upcoming_games:
-            if team.lower() in home.lower() or team.lower() in away.lower():
-                if "next" in query_lower:
-                    venue = "United Center in Chicago" if "bulls" in query_lower else "Delta Center in Salt Lake City" if "jazz" in query_lower else "TD Garden in Boston" if "celtics" in query_lower else "their home arena"
-                    if team.lower() in away.lower():
-                        venue = "the opponent’s arena" if not "bulls" in query_lower else "Spectrum Center in Charlotte"
-                    if "celtics" in query_lower:
-                        return f"Celtics hit the Wizards tonight, April 6, 2025, at {venue}. They’re locked to dominate—could be a blowout with Tatum leading. Who’s your pick?"
-                    elif "jazz" in query_lower:
-                        return f"Jazz face the Hawks tonight, April 6, 2025, at {venue}. They’re set to roll—could be a tight one with Clarkson firing. What’s your prediction?"
-                    elif "bulls" in query_lower:
-                        return f"Bulls play the Hornets tonight, April 6, 2025, at {venue}. They’re primed to dominate—could be a wild ride with DeRozan slicing. Who’s your pick?"
-                    else:
-                        return f"The {team} play {away if team.lower() in home.lower() else home} tonight, April 6, 2025, at {venue}. They’re primed to dominate—should be a wild ride. Who’s your pick?"
-        if "last" in query_lower and "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
+    elif "research" in query_lower and "last" in query_lower and team:
+        if "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
             return "Lakers lost to the Pelicans yesterday, April 5, 2025, at Smoothie King Center in New Orleans—score was tight, but they couldn’t seal it despite LeBron’s push. What’s your take?"
-        elif "last" in query_lower and "knicks" in query_lower:
+        elif "knicks" in query_lower:
             return "Knicks lost to the Hawks on April 5, 2025, at State Farm Arena in Atlanta—tough one, but Brunson kept it close with clutch plays. What’s your take?"
-        elif "last" in query_lower and "jazz" in query_lower:
+        elif "jazz" in query_lower:
             return "Jazz lost to the Pacers yesterday, April 5, 2025, at Gainbridge Fieldhouse in Indianapolis—score was close, but they couldn’t hold on despite Clarkson’s effort. What’s your take?"
-        elif "last" in query_lower and "celtics" in query_lower:
+        elif "celtics" in query_lower:
             return "Celtics beat the Suns yesterday, April 5, 2025, at Footprint Center in Phoenix—tight game, but Tatum sealed it with clutch plays. Your thoughts on their run?"
-        elif "next" in query_lower and "lakers" in query_lower and today.strftime('%Y-%m-%d') == '2025-04-06':
-            return "Lakers face the Cavaliers tomorrow, April 7, 2025, at Crypto.com Arena in LA. They’re hungry to bounce back—LeBron’s leading the charge. Who’s your pick?"
-        elif "next" in query_lower and "heat" in query_lower:
-            return "Heat play the Nets tomorrow, April 7, 2025, at Kaseya Center in Miami. They’re set to scrap—could be a banger with Herro firing. Who’s your call?"
-        elif "next" in query_lower and "pelicans" in query_lower:
-            return "Pelicans take on the Cavaliers tomorrow, April 7, 2025, at Rocket Mortgage FieldHouse in Cleveland. They’re gearing up—Zion’s ready to bulldoze. Who’s your pick?"
-        elif "next" in query_lower:
-            return f"The {team} have their next game soon—within a day or two, likely at their home arena. They’re primed to crush it—should be a wild ride with stars stepping up. Who’s your pick to shine?"
-        elif "last" in query_lower:
+        else:
             return f"The {team} played their last game recently—around {yesterday.strftime('%B %-d, %Y')}, at their home court. Solid effort, win or lose—kept it competitive with key plays going down. Your thoughts on their play?"
     elif "games" in query_lower and "today" in query_lower:
-        return "Today’s NBA slate, April 6, 2025: Celtics vs. Wizards at TD Garden, Boston; Jazz vs. Hawks at Delta Center, Salt Lake City; Bulls vs. Hornets at United Center, Chicago; and more action league-wide. Pick your winner—it’s gonna be epic."
+        return "Today’s NBA slate, April 6, 2025: Lakers vs. Thunder at Crypto.com Arena, LA; Celtics vs. Wizards at TD Garden, Boston; Jazz vs. Hawks at Delta Center, Salt Lake City; and more action league-wide. Pick your winner—it’s gonna be epic."
     elif "won" in query_lower and "games" in query_lower and team:
         return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs with some clutch plays. What’s your read?"
     else:
