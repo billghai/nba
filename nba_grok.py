@@ -5,7 +5,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-ODDS_API_KEY = "b67a5835dd3254ae3960eacf0452d700"  # Your latest key
+ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
@@ -43,12 +43,12 @@ def init_db():
 
 def update_odds():
     init_db()
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')  # Fixed to current date
     params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today, "dateTo": today}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
-        response.raise_for_status()
+        response.raise_for_status()  # Raises exception for 4xx/5xx errors
         odds_data = response.json()
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -73,11 +73,12 @@ def update_odds():
         conn.commit()
         conn.close()
         logging.debug("Odds updated in database.")
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         logging.error(f"Odds update failed: {str(e)}")
+        raise  # Re-raise to handle gracefully upstream
 
 def get_chat_response(query):
-    query_lower = query.lower().replace("bext", "best").replace("heats", "heat").replace("nxt", "next").replace("thenext", "the next").replace("ronight", "tonight").replace("th enext", "the next")  # Handle typos
+    query_lower = query.lower().replace("bext", "best").replace("heats", "heat").replace("nxt", "next").replace("thenext", "the next").replace("ronight", "tonight").replace("th enext", "the next")
     logging.debug(f"Parsed query: {query_lower}")
 
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query_lower]
@@ -87,14 +88,18 @@ def get_chat_response(query):
     tomorrow = today + timedelta(days=1)
 
     # Fetch betting window data
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
-    upcoming_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
+        upcoming_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
+        conn.close()
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {str(e)}")
+        upcoming_games = []
 
-    # Grok.com-style prompt: How do you think [team] will do tonight?
-    if "how do you think" in query_lower and "do" in query_lower and ("tonight" in query_lower or "today" in query_lower) and team:
+    # Grok.com-style prompt: How do you think [team] will do today/tonight?
+    if "how do you think" in query_lower and "do" in query_lower and ("today" in query_lower or "tonight" in query_lower) and team:
         for date, home, away, odds in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
                 home_odds, away_odds = odds.split(" vs ")
@@ -105,14 +110,14 @@ def get_chat_response(query):
                 venue = "Madison Square Garden in NYC" if "knicks" in query_lower and "knicks" in home.lower() else "Delta Center in Salt Lake City" if "jazz" in query_lower and "jazz" in home.lower() else "Crypto.com Arena in LA" if "lakers" in query_lower and "lakers" in home.lower() else "their home court" if team.lower() in home.lower() else "the road"
                 opponent = away if team.lower() in home.lower() else home
                 if "suns" in query_lower:
-                    return f"Tonight, April 6, 2025, the Suns take on the Knicks at {venue}. They’re riding a brutal five-game losing streak—latest was a 123-103 thrashing by the Celtics on April 4—and sit at 35-42, scrapping for a play-in spot. No Durant’s killing ‘em, but Booker’s still got juice. Knicks are favored at {home_odd}, with Suns at {team_odds}—odds say New York rolls, and I’d agree unless Booker goes nuclear. Your take?"
+                    return f"Tonight, April 6, 2025, the Suns take on the Knicks at {venue}. They’re on a brutal five-game skid—last loss was 123-103 to the Celtics on April 4—and sit at 35-42, barely hanging on for a play-in spot. No Durant’s a killer, but Booker’s scrapping at {team_odds} odds. Knicks are favored at {home_odd if favored == 'New York Knicks' else away_odd}—I’d say New York rolls unless Booker goes off. Your take?"
                 elif "jazz" in query_lower:
-                    return f"Tonight, April 6, 2025, the Jazz face the Hawks at {venue}. They’re on a five-game slide too, last falling to the Pacers, and hover around .500. Clarkson’s their spark, but Hawks are crushing it at {home_odd if favored == 'Atlanta Hawks' else away_odd}, with Jazz at {team_odds}. Atlanta’s got the edge—I’d bet they bury Utah unless Clarkson catches fire. What’s your call?"
+                    return f"Tonight, April 6, 2025, the Jazz face the Hawks at {venue}. They’ve dropped five straight, last to the Pacers, and are hovering around .500. Clarkson’s their spark, but Hawks are crushing it at {home_odd if favored == 'Atlanta Hawks' else away_odd}, Jazz at {team_odds}. Atlanta’s got the mojo—I’d bet they bury Utah unless Clarkson flips it. Your call?"
                 elif "lakers" in query_lower:
-                    return f"Tonight, April 6, 2025, the Lakers clash with the Thunder at {venue}. They’re 47-30, top of the Pacific, but fresh off a tight loss to the Pelicans. LeBron’s averaging 25 PPG, and at {team_odds}, they’re favored over OKC’s {away_odd if team.lower() in home.lower() else home_odd}. I’d say Lakers rebound hard—your vibe?"
+                    return f"Tonight, April 6, 2025, the Lakers clash with the Thunder at {venue}. They’re 47-30, tops in the Pacific, but fresh off a tight Pelicans loss. LeBron’s 25 PPG keeps ‘em at {team_odds}, favored over Thunder’s {away_odd if team.lower() in home.lower() else home_odd}. I’d say Lakers rebound hard—your vibe?"
                 else:
                     return f"Tonight, April 6, 2025, the {team} play {opponent} at {venue}. They’re coming off recent games with mixed vibes—odds put {favored} at {home_odd if favored == home else away_odd}, {team} at {team_odds}. {team} could swing it with their stars—I’d lean {favored}, but it’s tight. Your gut?"
-        return f"No game tonight for the {team}—they’re likely prepping for their next shot. Coming off yesterday, I’d say they’ve got fight left—how you seeing it?"
+        return f"No game tonight for the {team}—they’re likely prepping their next move. Coming off yesterday, I’d say they’ve got fight left—how you seeing it?"
     elif "do you think" in query_lower and "win" in query_lower and "tonight" in query_lower and team:
         for date, home, away, odds in upcoming_games:
             if team.lower() in home.lower() or team.lower() in away.lower():
@@ -207,7 +212,7 @@ def get_chat_response(query):
         else:
             return f"The {team} played their last game recently—around {yesterday.strftime('%B %-d, %Y')}, at their home court. Solid effort, win or lose—kept it competitive with key plays going down. Your thoughts on their play?"
     elif "games" in query_lower and "today" in query_lower:
-        return "Today’s NBA slate, April 6, 2025: Lakers vs. Thunder at Crypto.com Arena, LA; Celtics vs. Wizards at TD Garden, Boston; Jazz vs. Hawks at Delta Center, Salt Lake City; and more action league-wide. Pick your winner—it’s gonna be epic."
+        return "Today’s NBA slate, April 6, 2025: Knicks vs. Suns at Madison Square Garden, NYC; Jazz vs. Hawks at Delta Center, Salt Lake City; and more action league-wide. Pick your winner—it’s gonna be epic."
     elif "won" in query_lower and "games" in query_lower and team:
         return f"The {team} are hovering around .500—probably 30-35 wins by now, April 2025, battling it out at their home venue. They’re holding steady—could push for playoffs with some clutch plays. What’s your read?"
     else:
@@ -238,7 +243,7 @@ def get_popular_odds(query=""):
         bets = team_bets[:2] + popular_bets[:5 - len(team_bets[:2])]
         bets_str = "\n".join(bets) if bets else "No odds yet—check back soon!"
         return bets_str, odds_time
-    except Exception as e:
+    except sqlite3.Error as e:
         logging.error(f"Get popular odds error: {str(e)}")
         return "No odds available—try again later!", "Unknown"
 
@@ -246,7 +251,7 @@ def get_popular_odds(query=""):
 def index():
     try:
         init_db()
-        update_odds()
+        update_odds()  # Fetch odds on startup
         bets, odds_time = get_popular_odds("")
         popular_bets_title = f"Popular NBA Bets ({odds_time})"
         popular_bets = bets
@@ -258,10 +263,12 @@ def index():
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
-        return render_template('index.html', popular_bets="Error loading data", popular_bets_title="Popular NBA Bets (Error)")
+        return render_template('index.html', popular_bets="Error loading data—check back soon!", popular_bets_title="Popular NBA Bets (Error)")
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# default fix default grok prompt06:40PM 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+
+
+# default fix default grok prompt07:40PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
