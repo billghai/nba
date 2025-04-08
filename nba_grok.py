@@ -10,6 +10,18 @@ ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
+
+import sqlite3
+from datetime import datetime, timedelta, timezone
+import requests
+import logging
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
+ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+DB_PATH = "nba_roster.db"
+
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
     "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
@@ -86,7 +98,18 @@ def get_chat_response(query):
         c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
         today_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         conn.close()
-        popular_bets = [f"{home} vs {away} @ {odds.split(' vs ')[0].split(' @ ')[1]}/{odds.split(' vs ')[1].split(' @ ')[1]}" for _, home, away, odds in today_games]
+        popular_bets = []
+        for _, home, away, odds in today_games:
+            try:
+                parts = odds.split(' vs ')
+                if len(parts) == 2:
+                    home_odds = parts[0].split(' @ ')[1] if ' @ ' in parts[0] else "N/A"
+                    away_odds = parts[1].split(' @ ')[1] if ' @ ' in parts[1] else "N/A"
+                    popular_bets.append(f"{home} vs {away} @ {home_odds}/{away_odds}")
+                else:
+                    popular_bets.append(f"{home} vs {away} @ N/A")
+            except IndexError:
+                popular_bets.append(f"{home} vs {away} @ N/A")
     except sqlite3.Error:
         today_games = []
         popular_bets = []
@@ -98,36 +121,41 @@ def get_chat_response(query):
     # Single Grok 3 prompt response—no elifs
     response = "No dice—toss me an NBA query, I’ll hit it fast!"
     if team:
-        # Parse intent
         q = query.lower()
         is_last = "last" in q
         is_next = "next" in q or "research" in q
         is_today = "doing" in q and "today" in q
         is_beat = "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2
 
-        # Build response
-        if is_last and "lakers" in q:
-            response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
-        elif is_last:
-            response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
-        elif (is_next or is_today) and bets_relevant:
-            for _, home, away, odds in today_games:
-                if team.lower() in home.lower() or team.lower() in away.lower():
-                    opp = away if team.lower() in home.lower() else home
-                    odd = odds.split(' vs ')[0].split(' @ ')[1] if team.lower() in home.lower() else odds.split(' vs ')[1].split(' @ ')[1]
-                    response = f"{team} vs {opp} tonight @ {odd}—{'who’s your pick?' if is_next else 'solid vibe—your call?'}"
+        if is_last:
+            if "lakers" in q:
+                response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
+            else:
+                response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
+        if is_next and bets_relevant:
+            for bet in popular_bets:
+                if team in bet:
+                    odds = bet.split(' @ ')[1]
+                    opp = bet.split(' vs ')[1].split(' @ ')[0]
+                    response = f"{team} vs {opp} tonight @ {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Who’s your pick?"
                     break
-        elif is_next:
+        if is_next and not bets_relevant:
             response = f"{team}’s next is soon—stars ready to roll. Who you betting on?"
-        elif is_today:
+        if is_today and bets_relevant:
+            for bet in popular_bets:
+                if team in bet:
+                    odds = bet.split(' @ ')[1]
+                    response = f"{team} play tonight—odds {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Solid vibe—your call?"
+                    break
+        if is_today and not bets_relevant:
             if "lakers" in q:
                 response = "Lakers off today—47-30 after Warriors loss Apr 4. LeBron’s plotting. How you see ‘em?"
             else:
                 response = f"{team} off today—around .500 lately. They’re scrapping—your vibe?"
-        elif is_beat:
+        if is_beat:
             team1, team2 = teams_mentioned[:2]
-            if "celtics" in q and "lakers" in q:
-                response = "Celtics beat Lakers 168-134 all-time—epic stuff. Your take now?"
+            if "lakers" in q and "celtics" in q:
+                response = "Lakers lost 168-134 to Celtics all-time—epic stuff. Your take now?"
             else:
                 response = f"No tally for {team1} vs {team2}—{team1} often wins. Guess?"
 
@@ -180,7 +208,5 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-
-
 
 # default fix default grok prompt07:40PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
