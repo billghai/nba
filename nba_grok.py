@@ -1,13 +1,3 @@
-import sqlite3
-from datetime import datetime, timedelta, timezone
-import requests
-import logging
-from flask import Flask, render_template, request, jsonify
-
-app = Flask(__name__)
-ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
-ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
-DB_PATH = "nba_roster.db"
 
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -108,47 +98,38 @@ def get_chat_response(query):
     # Single Grok 3 prompt response—no elifs
     response = "No dice—toss me an NBA query, I’ll hit it fast!"
     if team:
-        # Parse query intent
-        is_last = "last" in query.lower()
-        is_next = "next" in query.lower() or "research" in query.lower()
-        is_today = "doing" in query.lower() and "today" in query.lower()
-        is_beat = "how many" in query.lower() and "times" in query.lower() and "beat" in query.lower() and len(teams_mentioned) >= 2
+        # Parse intent
+        q = query.lower()
+        is_last = "last" in q
+        is_next = "next" in q or "research" in q
+        is_today = "doing" in q and "today" in q
+        is_beat = "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2
 
-        # Build response based on intent and data
-        if is_last:
-            if "lakers" in query.lower():
-                response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
-            else:
-                response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
-        elif is_next and bets_relevant:
+        # Build response
+        if is_last and "lakers" in q:
+            response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
+        elif is_last:
+            response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
+        elif (is_next or is_today) and bets_relevant:
             for _, home, away, odds in today_games:
                 if team.lower() in home.lower() or team.lower() in away.lower():
                     opp = away if team.lower() in home.lower() else home
-                    response = f"{team} vs {opp} tonight @ {odds.split(' vs ')[0].split(' @ ')[1] if team.lower() in home.lower() else odds.split(' vs ')[1].split(' @ ')[1]}. Who’s your pick?"
+                    odd = odds.split(' vs ')[0].split(' @ ')[1] if team.lower() in home.lower() else odds.split(' vs ')[1].split(' @ ')[1]
+                    response = f"{team} vs {opp} tonight @ {odd}—{'who’s your pick?' if is_next else 'solid vibe—your call?'}"
                     break
         elif is_next:
             response = f"{team}’s next is soon—stars ready to roll. Who you betting on?"
-        elif is_today and bets_relevant:
-            for _, home, away, odds in today_games:
-                if team.lower() in home.lower() or team.lower() in away.lower():
-                    response = f"{team} play tonight—odds {odds.split(' vs ')[0].split(' @ ')[1] if team.lower() in home.lower() else odds.split(' vs ')[1].split(' @ ')[1]}. Solid vibe—your call?"
-                    break
         elif is_today:
-            if "lakers" in query.lower():
+            if "lakers" in q:
                 response = "Lakers off today—47-30 after Warriors loss Apr 4. LeBron’s plotting. How you see ‘em?"
             else:
                 response = f"{team} off today—around .500 lately. They’re scrapping—your vibe?"
         elif is_beat:
             team1, team2 = teams_mentioned[:2]
-            if "celtics" in query.lower() and "lakers" in query.lower():
+            if "celtics" in q and "lakers" in q:
                 response = "Celtics beat Lakers 168-134 all-time—epic stuff. Your take now?"
             else:
                 response = f"No tally for {team1} vs {team2}—{team1} often wins. Guess?"
-        elif bets_relevant:
-            for _, home, away, odds in today_games:
-                if team.lower() in home.lower() or team.lower() in away.lower():
-                    response = f"{team} tonight @ {odds.split(' vs ')[0].split(' @ ')[1] if team.lower() in home.lower() else odds.split(' vs ')[1].split(' @ ')[1]}—tight game. Who ya got?"
-                    break
 
     return response
 
@@ -199,7 +180,6 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-
 
 
 
