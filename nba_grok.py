@@ -11,16 +11,6 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 
-import sqlite3
-from datetime import datetime, timedelta, timezone
-import requests
-import logging
-from flask import Flask, render_template, request, jsonify
-
-app = Flask(__name__)
-ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
-ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
-DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -122,40 +112,41 @@ def get_chat_response(query):
     response = "No dice—toss me an NBA query, I’ll hit it fast!"
     if team:
         q = query.lower()
-        is_last = "last" in q
-        is_next = "next" in q or "research" in q
-        is_today = "doing" in q and "today" in q
-        is_beat = "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2
-
-        if is_last:
+        # Parse intent—process one at a time
+        if "last" in q:
             if "lakers" in q:
                 response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
+            elif "jazz" in q:
+                response = "Jazz’s last was Apr 6—fought hard, win or lose. Your take?"
             else:
                 response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
-        if is_next and bets_relevant:
-            for bet in popular_bets:
-                if team in bet:
-                    odds = bet.split(' @ ')[1]
-                    opp = bet.split(' vs ')[1].split(' @ ')[0]
-                    response = f"{team} vs {opp} tonight @ {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Who’s your pick?"
-                    break
-        if is_next and not bets_relevant:
-            response = f"{team}’s next is soon—stars ready to roll. Who you betting on?"
-        if is_today and bets_relevant:
-            for bet in popular_bets:
-                if team in bet:
-                    odds = bet.split(' @ ')[1]
-                    response = f"{team} play tonight—odds {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Solid vibe—your call?"
-                    break
-        if is_today and not bets_relevant:
-            if "lakers" in q:
+        elif "next" in q or "research" in q:
+            if bets_relevant:
+                for bet in popular_bets:
+                    if team in bet:
+                        odds = bet.split(' @ ')[1]
+                        opp = bet.split(' vs ')[1].split(' @ ')[0]
+                        response = f"{team} vs {opp} tonight @ {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Who’s your pick?"
+                        break
+            else:
+                response = f"{team}’s next is soon—stars ready to roll. Who you betting on?"
+        elif "doing" in q and "today" in q:
+            if bets_relevant:
+                for bet in popular_bets:
+                    if team in bet:
+                        odds = bet.split(' @ ')[1]
+                        response = f"{team} play tonight—odds {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Solid vibe—your call?"
+                        break
+            elif "lakers" in q:
                 response = "Lakers off today—47-30 after Warriors loss Apr 4. LeBron’s plotting. How you see ‘em?"
             else:
                 response = f"{team} off today—around .500 lately. They’re scrapping—your vibe?"
-        if is_beat:
+        elif "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2:
             team1, team2 = teams_mentioned[:2]
             if "lakers" in q and "celtics" in q:
-                response = "Lakers lost 168-134 to Celtics all-time—epic stuff. Your take now?"
+                response = "Lakers lost 168-134 to Celtics all-time—epic rivalry. Your take?"
+            elif "lakers" in q and "knicks" in q:
+                response = "No count for Lakers vs Knicks—Lakers edge it. Guess?"
             else:
                 response = f"No tally for {team1} vs {team2}—{team1} often wins. Guess?"
 
@@ -209,4 +200,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# default fix default grok prompt07:40PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# default fix default grok prompt9:30PM 4/740PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
