@@ -11,7 +11,6 @@ ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
 
 
-
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
     "hornets": "Charlotte Hornets", "bulls": "Chicago Bulls", "cavs": "Cleveland Cavaliers",
@@ -76,43 +75,13 @@ def update_odds():
         conn.close()
 
 def get_chat_response(query):
-    today = datetime.now(timezone.utc) - timedelta(hours=7)
-    yesterday = today - timedelta(days=1)
-    tomorrow = today + timedelta(days=1)
-
     # Fix typos in query
     q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
     team = teams_mentioned[0] if teams_mentioned else None
 
-    # Single Grok 3 prompt response—no elifs, minimal ifs
-    response = "No dice—toss me an NBA query, I’ll hit it fast!\nNext: Team stats? Game odds? Player form?"
-    if team:
-        # Base response—generic, witty, adaptable
-        response = f"{team}—hot topic! Here’s the scoop: "
-
-        # Adjust based on keywords—no conditionals beyond this
-        if "how" in q and ("did" in q or "do" in q) and "last" in q:
-            response += f"Last game was {yesterday.strftime('%b %-d')}—they battled. Thoughts?\nNext: Stats? Scorers? Odds?"
-        if "score" in q and "last" in q:
-            response += f"Scored big last on {yesterday.strftime('%b %-d')}—exact tally’s fuzzy. Guess?\nNext: Box score? Top guns? Next?"
-        if "next" in q or "research" in q:
-            response += "Next game’s soon—stars are primed. Who you betting on?\nNext: Opponent? Odds? Form?"
-        if "doing" in q and "today" in q:
-            response += f"Today? Off, hovering ~.500. Your vibe?\nNext: Slate? Form? Injuries?"
-        if "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2:
-            team1, team2 = teams_mentioned[:2]
-            response += f"No tally for {team1} vs {team2}—{team1} often wins. Guess?\nNext: Matchups? History? Next?"
-        if "think" in q and "beat" in q and len(teams_mentioned) >= 2:
-            team1, team2 = teams_mentioned[:2]
-            response += f"No odds for {team1} vs {team2}—{team1} might edge it. Your call?\nNext: Odds? Form? Matchups?"
-
-        # Apply specific data if available—overwrite generic
-        if "lakers" in q and "last" in q:
-            response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Tough break!\nNext: Stats? Scorers? Odds?"
-        if "heat" in q and "last" in q:
-            response = "Heat won 117-105 vs 76ers Apr 7—solid win. Your take?\nNext: Stats? Scorers? Odds?"
-
+    # Call your custom prompt from nba_render/prompt.py, passing fixed query
+    response = generate_prompt(q, team, teams_mentioned)
     return response
 
 def get_popular_odds():
@@ -154,4 +123,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
 
 
-# default fix default grok prompt 4/8 0PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+# default fix default grok separate prompt 4/8 9PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
