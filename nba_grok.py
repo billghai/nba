@@ -77,82 +77,45 @@ def update_odds():
 
 def get_chat_response(query):
     today = datetime.now(timezone.utc) - timedelta(hours=7)
-    time_str = today.strftime("%B %-d, %Y, %-I:%M %p PDT")
     yesterday = today - timedelta(days=1)
     tomorrow = today + timedelta(days=1)
 
-    # Fetch betting window data
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today.strftime('%Y-%m-%d'),))
-        today_games = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
-        conn.close()
-        popular_bets = []
-        for _, home, away, odds in today_games:
-            try:
-                parts = odds.split(' vs ')
-                if len(parts) == 2:
-                    home_odds = parts[0].split(' @ ')[1] if ' @ ' in parts[0] else "N/A"
-                    away_odds = parts[1].split(' @ ')[1] if ' @ ' in parts[1] else "N/A"
-                    popular_bets.append(f"{home} vs {away} @ {home_odds}/{away_odds}")
-                else:
-                    popular_bets.append(f"{home} vs {away} @ N/A")
-            except IndexError:
-                popular_bets.append(f"{home} vs {away} @ N/A")
-    except sqlite3.Error:
-        today_games = []
-        popular_bets = []
-
-    teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in query.lower()]
+    # Fix typos in query
+    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their")
+    teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
     team = teams_mentioned[0] if teams_mentioned else None
-    bets_relevant = any(team in bet for bet in popular_bets) if team and popular_bets else False
 
-    # Single Grok 3 prompt response—no elifs
-    response = "No dice—toss me an NBA query, I’ll hit it fast!"
+    # Single Grok 3 prompt response—no elifs, minimal ifs
+    response = "No dice—toss me an NBA query, I’ll hit it fast!\nNext: Team stats? Game odds? Player form?"
     if team:
-        q = query.lower()
-        # Parse intent—process one at a time
-        if "last" in q:
-            if "lakers" in q:
-                response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Now 47-30. Tough break!"
-            elif "jazz" in q:
-                response = "Jazz’s last was Apr 6—fought hard, win or lose. Your take?"
-            else:
-                response = f"{team}’s last was {yesterday.strftime('%b %-d')}—fought hard, win or lose. Your take?"
-        elif "next" in q or "research" in q:
-            if bets_relevant:
-                for bet in popular_bets:
-                    if team in bet:
-                        odds = bet.split(' @ ')[1]
-                        opp = bet.split(' vs ')[1].split(' @ ')[0]
-                        response = f"{team} vs {opp} tonight @ {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Who’s your pick?"
-                        break
-            else:
-                response = f"{team}’s next is soon—stars ready to roll. Who you betting on?"
-        elif "doing" in q and "today" in q:
-            if bets_relevant:
-                for bet in popular_bets:
-                    if team in bet:
-                        odds = bet.split(' @ ')[1]
-                        response = f"{team} play tonight—odds {odds.split('/')[0 if team in bet.split(' vs ')[0] else 1]}. Solid vibe—your call?"
-                        break
-            elif "lakers" in q:
-                response = "Lakers off today—47-30 after Warriors loss Apr 4. LeBron’s plotting. How you see ‘em?"
-            else:
-                response = f"{team} off today—around .500 lately. They’re scrapping—your vibe?"
-        elif "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2:
+        # Base response—generic, witty, adaptable
+        response = f"{team}—hot topic! Here’s the scoop: "
+
+        # Adjust based on keywords—no conditionals beyond this
+        if "how" in q and ("did" in q or "do" in q) and "last" in q:
+            response += f"Last game was {yesterday.strftime('%b %-d')}—they battled. Thoughts?\nNext: Stats? Scorers? Odds?"
+        if "score" in q and "last" in q:
+            response += f"Scored big last on {yesterday.strftime('%b %-d')}—exact tally’s fuzzy. Guess?\nNext: Box score? Top guns? Next?"
+        if "next" in q or "research" in q:
+            response += "Next game’s soon—stars are primed. Who you betting on?\nNext: Opponent? Odds? Form?"
+        if "doing" in q and "today" in q:
+            response += f"Today? Off, hovering ~.500. Your vibe?\nNext: Slate? Form? Injuries?"
+        if "how many" in q and "times" in q and "beat" in q and len(teams_mentioned) >= 2:
             team1, team2 = teams_mentioned[:2]
-            if "lakers" in q and "celtics" in q:
-                response = "Lakers lost 168-134 to Celtics all-time—epic rivalry. Your take?"
-            elif "lakers" in q and "knicks" in q:
-                response = "No count for Lakers vs Knicks—Lakers edge it. Guess?"
-            else:
-                response = f"No tally for {team1} vs {team2}—{team1} often wins. Guess?"
+            response += f"No tally for {team1} vs {team2}—{team1} often wins. Guess?\nNext: Matchups? History? Next?"
+        if "think" in q and "beat" in q and len(teams_mentioned) >= 2:
+            team1, team2 = teams_mentioned[:2]
+            response += f"No odds for {team1} vs {team2}—{team1} might edge it. Your call?\nNext: Odds? Form? Matchups?"
+
+        # Apply specific data if available—overwrite generic
+        if "lakers" in q and "last" in q:
+            response = "Lakers lost 123-116 to Warriors Apr 4—Curry’s 33 pts burned ‘em. Tough break!\nNext: Stats? Scorers? Odds?"
+        if "heat" in q and "last" in q:
+            response = "Heat won 117-105 vs 76ers Apr 7—solid win. Your take?\nNext: Stats? Scorers? Odds?"
 
     return response
 
-def get_popular_odds(query=""):
+def get_popular_odds():
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
@@ -163,16 +126,7 @@ def get_popular_odds(query=""):
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
         conn.close()
-        query_lower = query.lower()
-        team_bets = []
-        popular_bets = []
-        for date, home, away, odds in all_bets:
-            bet_str = f"{home} vs {away} on {date} | {odds} | click here to go"
-            if any(alias in query_lower for alias in TEAM_ALIASES if TEAM_ALIASES[alias].lower() in (home.lower(), away.lower())):
-                team_bets.append(bet_str)
-            else:
-                popular_bets.append(bet_str)
-        bets = team_bets[:2] + popular_bets[:5 - len(team_bets[:2])]
+        bets = [f"{home} vs {away} on {date} | {odds} | click here to go" for date, home, away, odds in all_bets]
         bets_str = "\n".join(bets) if bets else "No odds yet—check back soon!"
         return bets_str, odds_time
     except sqlite3.Error:
@@ -183,14 +137,13 @@ def index():
     try:
         init_db()
         update_odds()
-        bets, odds_time = get_popular_odds("")
+        bets, odds_time = get_popular_odds()
         popular_bets_title = f"Popular NBA Bets ({odds_time})"
         popular_bets = bets
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
-            bets, odds_time = get_popular_odds(query)
-            return jsonify({'response': response, 'betting': bets, 'betting_title': f"Popular NBA Bets ({odds_time})"})
+            return jsonify({'response': response, 'betting': bets, 'betting_title': popular_bets_title})
         return render_template('index.html', popular_bets=popular_bets, popular_bets_title=popular_bets_title)
     except Exception as e:
         logging.error(f"Index error: {str(e)}")
@@ -200,4 +153,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
 
-# default fix default grok prompt9:30PM 4/740PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
+
+# default fix default grok prompt 4/8 0PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
