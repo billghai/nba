@@ -1,4 +1,3 @@
-
 import sqlite3
 from datetime import datetime, timedelta, timezone
 import requests
@@ -9,7 +8,6 @@ app = Flask(__name__)
 ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DB_PATH = "nba_roster.db"
-
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -75,13 +73,49 @@ def update_odds():
         conn.close()
 
 def get_chat_response(query):
+    # Prompt: Basketball Guru with latest NBA data, authoritative and lighthearted, 150 chars max
+    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 9, 2025
+    yesterday = today - timedelta(days=1)  # e.g., Apr 8
+    tomorrow = today + timedelta(days=1)  # e.g., Apr 10
+
     # Fix typos in query
     q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
     team = teams_mentioned[0] if teams_mentioned else None
 
-    # Call your custom prompt from nba_render/prompt.py, passing fixed query
-    response = generate_prompt(q, team, teams_mentioned)
+    # Fetch bets for upcoming games
+    bets, _ = get_popular_odds()
+    bets_list = bets.split('\n') if bets else []
+
+    # Guru’s response—single flow, no elifs
+    response = "Yo, Guru’s got no team! Ask me anything!\nNext: Scores? Odds? Stars?"
+    if team:
+        # Base response—lighthearted and authoritative
+        response = f"Guru on {team}: "
+        # Action and date—ternary ops, no conditionals beyond if team
+        action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q else "chill"
+        date = yesterday.strftime('%b %-d') if "last" in q else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q else "today"
+        
+        # Last game scores—static for now, live data later
+        last_score = "played—scores TBD. Wild!" if "last" in q else ""
+        last_score = "lost 123-116 to Warriors, Curry 33. Ouch!" if "lakers" in q and "last" in q else last_score
+        last_score = "won 117-105 vs 76ers, Butler 28. Sweet!" if "heat" in q and "last" in q else last_score
+        
+        # Next game odds—check bets_list
+        next_odds = "play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q else ""
+        for bet in bets_list:
+            if team in bet and ("next" in q or "research" in q or "tell" in q):
+                parts = bet.split(' | ')
+                matchup = parts[0].split(' vs ')
+                odds = parts[1].split(' vs ')
+                opp = matchup[1] if team == matchup[0] else matchup[0]
+                team_odds = odds[1].split(' @ ')[1] if team == matchup[0] else odds[0].split(' @ ')[1]
+                next_odds = f"face {opp} @ {team_odds}. Bet big?"
+                break
+        
+        # Build response—scores for last, odds for next
+        response += f"{last_score if 'last' in q else next_odds if 'next' in q or 'research' in q or 'tell' in q else 'chill—stats hot!'} {date}\nNext: Stats? Odds?"
+
     return response
 
 def get_popular_odds():
@@ -95,11 +129,11 @@ def get_popular_odds():
         odds_time_row = c.fetchone()
         odds_time = odds_time_row[0] if odds_time_row else "Unknown"
         conn.close()
-        bets = [f"{home} vs {away} on {date} | {odds} | click here to go" for date, home, away, odds in all_bets]
+        bets = [f"{home} vs {away} on {date} | {odds}" for date, home, away, odds in all_bets]
         bets_str = "\n".join(bets) if bets else "No odds yet—check back soon!"
         return bets_str, odds_time
     except sqlite3.Error:
-        return "No odds available—try again later!", "Unknown"
+        return "No odds available—try again!", "Unknown"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -121,6 +155,5 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-
 
 # default fix default grok separate prompt 4/8 9PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
