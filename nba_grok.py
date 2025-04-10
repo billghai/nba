@@ -1,21 +1,8 @@
-import sqlite3
-from datetime import datetime, timedelta, timezone
-import requests
 import logging
+from datetime import datetime, timedelta, timezone
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
- # ODDS_API_KEY = "c70dcefb44aafd57586663b94cee9c5f"  # Your latest key
-# ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
-DB_PATH = "nba_roster.db"
-
-import sqlite3
-from datetime import datetime, timedelta, timezone
-import logging
-from flask import Flask, render_template, request, jsonify
-
-app = Flask(__name__)
-DB_PATH = "nba_roster.db"
 
 TEAM_ALIASES = {
     "hawks": "Atlanta Hawks", "celtics": "Boston Celtics", "nets": "Brooklyn Nets",
@@ -35,37 +22,26 @@ TEAM_ALIASES = {
     "jazz": "Utah Jazz", "wizards": "Washington Wizards", "wiz": "Washington Wizards",
 }
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS games (
-        date TEXT, home TEXT, away TEXT, odds TEXT, status TEXT, score TEXT,
-        PRIMARY KEY (date, home, away)
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS metadata (
-        key TEXT PRIMARY KEY, value TEXT
-    )''')
-    conn.commit()
-    conn.close()
-
 def get_chat_response(query):
-    # Prompt: Basketball Guru with latest NBA data, authoritative and lighthearted, 150 chars max
+    # Prompt: Static, as requested
+    # today = datetime.now(timezone.utc) - timedelta(hours=7)
+    # You are a Basketball Guru with the latest data on NBA player and game Stats. Your job is to provide authoritative and lighthearted answers to the queries in 150 characters or less. Be sure to include the latest final scores of the matches and individual player scores. Where possible offer the betting odds on the upcoming games.
     today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 10
     yesterday = today - timedelta(days=1)  # e.g., Apr 9
     tomorrow = today + timedelta(days=1)  # e.g., Apr 11
 
     # Fix typos in query
-    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research")
+    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research").replace("nexy", "next")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
     team = next((t for t in teams_mentioned if t in q.split("beat")[0] or "when" in q or "research" in q or "tell" in q), teams_mentioned[0] if teams_mentioned else None)
 
     # Guru’s response—single flow, no elifs
     response = "Yo, Guru’s got no team! Ask me anything!\nNext: Scores? Odds? Stars?"
     if team:
-        short_team = team.split()[-1]  # e.g., "Lakers"
+        short_team = team.split()[-1]  # e.g., "Knicks"
         response = f"Guru on {short_team}: "
         action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q or "when" in q else "chill"
-        date = yesterday.strftime('%b %-d') if "last" in q else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q or "when" in q else "today"
+        date = yesterday.strftime('%b %-d') if "last" in q else today.strftime('%b %-d') if "knicks" in q and ("next" in q or "when" in q) else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q or "when" in q else "today"
 
         # Last game scores—static, matches Grok 3
         last_score = f"played—scores TBD. Wild!" if "last" in q else ""
@@ -74,6 +50,7 @@ def get_chat_response(query):
 
         # Next game—static to match Grok 3
         next_odds = f"play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q or "when" in q else ""
+        next_odds = f"face Pistons 4 PM PDT. Bet big?" if "knicks" in q and ("next" in q or "when" in q) else next_odds  # 7 PM ET = 4 PM PDT
         next_odds = f"face Rockets 7:30 PM. Bet big?" if "lakers" in q and ("next" in q or "when" in q) else next_odds
 
         # Build response
@@ -84,7 +61,6 @@ def get_chat_response(query):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     try:
-        init_db()
         if request.method == 'POST':
             query = request.form.get('query', '')
             response = get_chat_response(query)
