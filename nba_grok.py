@@ -43,9 +43,9 @@ def init_db():
 def update_odds():
     init_db()
     today = datetime.now(timezone.utc) - timedelta(hours=7)
-    tomorrow = (today + timedelta(days=1)).strftime('%Y-%m-%d')  # Apr 10
-    day_after = (today + timedelta(days=2)).strftime('%Y-%m-%d')  # Apr 11
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": tomorrow, "dateTo": day_after}
+    tomorrow = (today + timedelta(days=1)).strftime('%Y-%m-%d')  # Apr 11
+    three_days = (today + timedelta(days=3)).strftime('%Y-%m-%d')  # Apr 13—wider window
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": tomorrow, "dateTo": three_days}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -76,15 +76,15 @@ def update_odds():
 
 def get_chat_response(query):
     # Prompt: Basketball Guru with latest NBA data, authoritative and lighthearted, 150 chars max
-    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 9
-    yesterday = today - timedelta(days=1)  # e.g., Apr 8
-    tomorrow = today + timedelta(days=1)  # e.g., Apr 10
-    day_after = today + timedelta(days=2)  # e.g., Apr 11
+    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 10
+    yesterday = today - timedelta(days=1)  # e.g., Apr 9
+    tomorrow = today + timedelta(days=1)  # e.g., Apr 11
+    day_after = today + timedelta(days=2)  # e.g., Apr 12
 
     # Fix typos in query
     q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
-    team = teams_mentioned[0] if teams_mentioned else None
+    team = teams_mentioned[0] if teams_mentioned else None  # First team as focus
 
     # Fetch bets for upcoming games
     bets, _ = get_popular_odds()
@@ -118,9 +118,12 @@ def get_chat_response(query):
         # Lakers-specific tweak for April 11 vs. Rockets
         if "lakers" in q and ("next" in q or "when" in q):
             next_odds = "face Rockets 7:30 PM. Bet big?"
+        # Knicks vs. Pistons prediction
+        if "knicks" in q and "pistons" in q and "beat" in q:
+            next_odds = f"face Pistons @ 2.7 Apr 11. Tight—bet?\nCunningham 25 avg!"
 
-        # Build response—scores for last, odds for next
-        response += f"{last_score if 'last' in q else next_odds} {date}\nNext: Stats? Odds?"
+        # Build response—scores for last, odds/prediction for next
+        response += f"{last_score if 'last' in q else next_odds} {date if 'last' not in q else ''}\nNext: Stats? Odds?"
 
     return response
 
@@ -129,7 +132,7 @@ def get_popular_odds():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         tomorrow = (datetime.now(timezone.utc) - timedelta(hours=7) + timedelta(days=1)).strftime('%Y-%m-%d')
-        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (tomorrow,))
+        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date >= ? ORDER BY date LIMIT 15", (tomorrow,))
         all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
