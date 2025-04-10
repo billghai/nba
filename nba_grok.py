@@ -23,8 +23,7 @@ TEAM_ALIASES = {
 }
 
 def get_chat_response(query):
-    # Prompt: Static, as requested
-    # today = datetime.now(timezone.utc) - timedelta(hours=7)
+    # Prompt: today = datetime.now(timezone.utc) - timedelta(hours=7)
     # You are a Basketball Guru with the latest data on NBA player and game Stats. Your job is to provide authoritative and lighthearted answers to the queries in 150 characters or less. Be sure to include the latest final scores of the matches and individual player scores. Where possible offer the betting odds on the upcoming games.
     today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 10
     yesterday = today - timedelta(days=1)  # e.g., Apr 9
@@ -40,23 +39,26 @@ def get_chat_response(query):
     if team:
         short_team = team.split()[-1]  # e.g., "Knicks"
         response = f"Guru on {short_team}: "
-        action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q or "when" in q else "chill"
-        date = yesterday.strftime('%b %-d') if "last" in q else today.strftime('%b %-d') if "knicks" in q and ("next" in q or "when" in q) else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q or "when" in q else "today"
+        action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q or "when" in q or "beat" in q else "chill"
+        date = yesterday.strftime('%b %-d') if "last" in q else today.strftime('%b %-d') if "knicks" in q and ("next" in q or "when" in q or "beat" in q) else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q or "when" in q else "today"
 
-        # Last game scores—static, matches Grok 3
+        # Last game scores—static to match Grok 3
         last_score = f"played—scores TBD. Wild!" if "last" in q else ""
         last_score = f"lost 123-116 to Warriors, Curry 33. Ouch!" if "lakers" in q and "last" in q else last_score
         last_score = f"won 117-105 vs 76ers, Butler 28. Sweet!" if "heat" in q and "last" in q else last_score
 
         # Next game—static to match Grok 3
         next_odds = f"play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q or "when" in q else ""
-        next_odds = f"face Pistons 4 PM PDT. Bet big?" if "knicks" in q and ("next" in q or "when" in q) else next_odds  # 7 PM ET = 4 PM PDT
-        next_odds = f"face Rockets 7:30 PM. Bet big?" if "lakers" in q and ("next" in q or "when" in q) else next_odds
+        next_odds = f"face Pistons Apr 10. Bet big?" if "knicks" in q and ("next" in q or "when" in q) else next_odds
+        next_odds = f"face Rockets Apr 11. Bet big?" if "lakers" in q and ("next" in q or "when" in q) else next_odds
+        # Knicks vs. Pistons prediction—match Grok 3 stats
+        if "knicks" in q and "pistons" in q and "beat" in q:
+            response = f"Guru on Knicks: vs Pistons Apr 10. Brunson hot—bet?\nCunningham 25 avg!"
 
         # Build response
-        response += f"{last_score if 'last' in q else next_odds} {date}\nNext: Stats? Odds?"
+        response = f"{response}{last_score if 'last' in q else next_odds} {date if 'last' not in q and not ('knicks' in q and 'pistons' in q and 'beat' in q) else ''}\nNext: Stats? Odds?"
 
-    return response
+    return response[:150]  # Cap at 150 chars
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -73,6 +75,5 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
-
 
 # default fix no ODDs API fixed prompt 4/10 1PM https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
