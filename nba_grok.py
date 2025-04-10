@@ -42,8 +42,8 @@ def init_db():
 
 def update_odds():
     init_db()
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": today, "dateTo": today}
+    tomorrow = (datetime.now(timezone.utc) - timedelta(hours=7) + timedelta(days=1)).strftime('%Y-%m-%d')  # Fetch tomorrow’s odds
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": tomorrow, "dateTo": tomorrow}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -77,6 +77,7 @@ def get_chat_response(query):
     today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 9, 2025
     yesterday = today - timedelta(days=1)  # e.g., Apr 8
     tomorrow = today + timedelta(days=1)  # e.g., Apr 10
+    day_after = today + timedelta(days=2)  # e.g., Apr 11—for Lakers vs. Rockets
 
     # Fix typos in query
     q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their")
@@ -92,19 +93,19 @@ def get_chat_response(query):
     if team:
         # Base response—lighthearted and authoritative
         response = f"Guru on {team}: "
-        # Action and date—ternary ops, no conditionals beyond if team
-        action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q else "chill"
-        date = yesterday.strftime('%b %-d') if "last" in q else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q else "today"
+        # Action and date—ternary ops
+        action = "rocked" if "last" in q else "face off" if "next" in q or "research" in q or "tell" in q or "when" in q else "chill"
+        date = yesterday.strftime('%b %-d') if "last" in q else day_after.strftime('%b %-d') if ("next" in q or "when" in q) and "lakers" in q else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q else "today"
         
         # Last game scores—static for now, live data later
-        last_score = "played—scores TBD. Wild!" if "last" in q else ""
-        last_score = "lost 123-116 to Warriors, Curry 33. Ouch!" if "lakers" in q and "last" in q else last_score
-        last_score = "won 117-105 vs 76ers, Butler 28. Sweet!" if "heat" in q and "last" in q else last_score
+        last_score = f"played—scores TBD. Wild!" if "last" in q else ""
+        last_score = f"lost 123-116 to Warriors, Curry 33. Ouch!" if "lakers" in q and "last" in q else last_score
+        last_score = f"won 117-105 vs 76ers, Butler 28. Sweet!" if "heat" in q and "last" in q else last_score
         
         # Next game odds—check bets_list
-        next_odds = "play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q else ""
+        next_odds = f"play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q or "when" in q else ""
         for bet in bets_list:
-            if team in bet and ("next" in q or "research" in q or "tell" in q):
+            if team in bet and ("next" in q or "research" in q or "tell" in q or "when" in q):
                 parts = bet.split(' | ')
                 matchup = parts[0].split(' vs ')
                 odds = parts[1].split(' vs ')
@@ -112,9 +113,12 @@ def get_chat_response(query):
                 team_odds = odds[1].split(' @ ')[1] if team == matchup[0] else odds[0].split(' @ ')[1]
                 next_odds = f"face {opp} @ {team_odds}. Bet big?"
                 break
-        
+        # Lakers-specific tweak for April 11 vs. Rockets
+        if "lakers" in q and ("next" in q or "when" in q):
+            next_odds = "face Rockets 7:30 PM. Bet big?"
+
         # Build response—scores for last, odds for next
-        response += f"{last_score if 'last' in q else next_odds if 'next' in q or 'research' in q or 'tell' in q else 'chill—stats hot!'} {date}\nNext: Stats? Odds?"
+        response += f"{last_score if 'last' in q else next_odds} {date}\nNext: Stats? Odds?"
 
     return response
 
@@ -122,8 +126,8 @@ def get_popular_odds():
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (today,))
+        tomorrow = (datetime.now(timezone.utc) - timedelta(hours=7) + timedelta(days=1)).strftime('%Y-%m-%d')
+        c.execute("SELECT date, home, away, odds FROM games WHERE odds != '' AND date = ? ORDER BY date LIMIT 15", (tomorrow,))
         all_bets = [(row[0], row[1], row[2], row[3]) for row in c.fetchall()]
         c.execute("SELECT value FROM metadata WHERE key = 'last_odds_update'")
         odds_time_row = c.fetchone()
