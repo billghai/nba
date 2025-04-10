@@ -42,8 +42,10 @@ def init_db():
 
 def update_odds():
     init_db()
-    tomorrow = (datetime.now(timezone.utc) - timedelta(hours=7) + timedelta(days=1)).strftime('%Y-%m-%d')  # Fetch tomorrow’s odds
-    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": tomorrow, "dateTo": tomorrow}
+    today = datetime.now(timezone.utc) - timedelta(hours=7)
+    tomorrow = (today + timedelta(days=1)).strftime('%Y-%m-%d')  # Apr 10
+    day_after = (today + timedelta(days=2)).strftime('%Y-%m-%d')  # Apr 11
+    params = {"apiKey": ODDS_API_KEY, "regions": "us", "markets": "h2h", "oddsFormat": "decimal", "dateFrom": tomorrow, "dateTo": day_after}
     try:
         logging.debug("Fetching odds from The Odds API...")
         response = requests.get(ODDS_API_URL, params=params, timeout=5)
@@ -74,13 +76,13 @@ def update_odds():
 
 def get_chat_response(query):
     # Prompt: Basketball Guru with latest NBA data, authoritative and lighthearted, 150 chars max
-    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 9, 2025
+    today = datetime.now(timezone.utc) - timedelta(hours=7)  # PDT, e.g., Apr 9
     yesterday = today - timedelta(days=1)  # e.g., Apr 8
     tomorrow = today + timedelta(days=1)  # e.g., Apr 10
-    day_after = today + timedelta(days=2)  # e.g., Apr 11—for Lakers vs. Rockets
+    day_after = today + timedelta(days=2)  # e.g., Apr 11
 
     # Fix typos in query
-    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their")
+    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
     team = teams_mentioned[0] if teams_mentioned else None
 
@@ -159,5 +161,6 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
+
 
 # default fix default grok separate prompt 4/8 9PM MK API 3:52 PM  https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
