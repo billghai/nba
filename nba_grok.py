@@ -30,14 +30,14 @@ def get_chat_response(query):
     tomorrow = today + timedelta(days=1)  # e.g., Apr 11
 
     # Fix typos in query
-    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research").replace("nexy", "next").replace("lebron's", "lebron").replace("what was", "research").replace("hte", "the")
+    q = query.lower().replace("hoe", "how").replace("heats", "heat").replace("intheir", "in their").replace("reseacrh", "research").replace("nexy", "next").replace("lebron's", "lebron").replace("what was", "research").replace("hte", "the").replace("win", "beat")
     teams_mentioned = [full_name for alias, full_name in TEAM_ALIASES.items() if alias in q]
-    team = next((t for t in teams_mentioned if t in q.split("beat")[0] or "when" in q or "research" in q or "tell" in q or "what" in q), teams_mentioned[0] if teams_mentioned else None)
+    team = next((t for t in teams_mentioned if t in q.split("beat")[0] or "when" in q or "research" in q or "tell" in q or "what" in q or "how" in q), teams_mentioned[0] if teams_mentioned else None)
 
     # Guru’s response—single flow, no elifs
     response = "Yo, Guru’s got no team! Ask me anything!\nNext: Scores? Odds? Stars?"
     if team:
-        short_team = team.split()[-1]  # e.g., "Pelicans"
+        short_team = team.split()[-1]  # e.g., "Lakers"
         response = f"Guru on {short_team}: "
         action = "rocked" if "last" in q or "score" in q else "face off" if "next" in q or "research" in q or "tell" in q or "when" in q or "what" in q or "beat" in q else "chill"
         date = yesterday.strftime('%b %-d') if "last" in q or "score" in q else today.strftime('%b %-d') if "knicks" in q and ("next" in q or "when" in q or "beat" in q) else tomorrow.strftime('%b %-d') if "next" in q or "research" in q or "tell" in q or "when" in q or "what" in q else "today"
@@ -50,8 +50,10 @@ def get_chat_response(query):
         # Next game—static to match Grok 3
         next_odds = f"play soon—odds TBD. Bet smart!" if "next" in q or "research" in q or "tell" in q or "when" in q or "what" in q else ""
         next_odds = f"face Pistons Apr 10. Bet big?" if "knicks" in q and ("next" in q or "when" in q) else next_odds
-        next_odds = f"face Heat 5 PM PDT Apr 11. Bet big?" if "pelicans" in q and ("next" in q or "research" in q or "tell" in q or "when" in q or "what" in q) else next_odds  # 7 PM CT = 5 PM PDT
+        next_odds = f"face Heat 5 PM PDT Apr 11. Bet big?" if "pelicans" in q and ("next" in q or "research" in q or "tell" in q or "when" in q or "what" in q) else next_odds
         next_odds = f"face Rockets Apr 11. Bet big?" if "lakers" in q and ("next" in q or "when" in q) else next_odds
+        # Season wins—static to match Grok 3
+        season = f"49-31 as of Apr 9. Solid!" if "lakers" in q and "won" in q and "season" in q else "record TBD—stay tuned!"
         # Lakers vs. Rockets prediction—match Grok 3 stats
         if "lakers" in q and "rockets" in q and "beat" in q:
             response = f"Guru on Lakers: vs Rockets Apr 11. LeBron 27—hot!\nRockets may rest stars."
@@ -60,7 +62,7 @@ def get_chat_response(query):
             response = f"Guru on Knicks: vs Pistons Apr 10. Brunson hot—bet?\nCunningham 25 avg!"
 
         # Build response
-        response = f"{response}{last_score if 'last' in q or 'score' in q else next_odds} {date if 'last' not in q and 'score' not in q and not ('lakers' in q and 'rockets' in q and 'beat' in q) and not ('knicks' in q and 'pistons' in q and 'beat' in q) else ''}\nNext: Stats? Odds?"
+        response = f"{response}{season if 'won' in q and 'season' in q else last_score if 'last' in q or 'score' in q else next_odds} {date if 'last' not in q and 'score' not in q and 'won' not in q and 'season' not in q and not ('lakers' in q and 'rockets' in q and 'beat' in q) and not ('knicks' in q and 'pistons' in q and 'beat' in q) else ''}\nNext: Stats? Odds?"
 
     return response[:150]  # Cap at 150 chars
 
@@ -79,6 +81,7 @@ def index():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(host='0.0.0.0', port=10000)
+
 
 
 # 1 default fix no ODDs API fixed prompt 4/10 1PM https://grok.com/chat/0ccaf3fa-ebee-46fb-a06c-796fe7bede44
